@@ -1,0 +1,21 @@
+/**
+ * @file nxp_simtemp.h
+ * @brief Main header file for the nxp_siimtep.
+ *
+ * This file contains the declarations for the MyClass class and the
+ * other public functions that are part of the library's API.
+ * The detailed implementation can be found in `my_library.cpp`.
+ *
+ * @author Jose Jorge Figueroa Figueroa
+ * @author https://github.com/Figuejojo
+ * @date 2025-09-29
+ */
+#ifndef _NXP_SIMTEMP_H_
+#define _NXP_SIMTEMP_H_
+
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+
+
+#endif //_NXP_SIMTEMP_H_
