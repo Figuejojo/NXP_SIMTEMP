@@ -14,6 +14,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Jose Jorge Figueroa");
 MODULE_DESCRIPTION("NXP Temperature Simulation Sensor");
+MODULE_VERSION("0.1.0");
 
 /**
  * @brief Initializes the simulated temperature sensor module.
