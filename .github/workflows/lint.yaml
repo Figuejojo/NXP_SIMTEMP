@@ -3,9 +3,10 @@ name: Lint Check
 on:
   push:
     branches:
-      - feature/CI/Lint
       - develop
-
+  pull_request:
+    branches:
+      - develop
 jobs:
   lint:
     runs-on: ubuntu-latest
