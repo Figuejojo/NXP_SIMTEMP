@@ -2,10 +2,11 @@
 This incremental test plan ensures the simtemp Linux kernel module is validated step-by-step for stability, correctness, and safe integration into production systems.
 ## T0 - Baseline Module
 Goal: Verify the module can be built, loaded, and unloaded cleanly.
-- [ ] Build Module
-- [ ] Load (insmod) → Inspect dmesg for init message
-- [ ] Unload (rmmod) → Inspect dmesg for exit message
-- [ ] Confirm no kernel warnings (dmesg -T | grep -i warn)
+- [x] Build Module
+- [x] Load (insmod) → Inspect dmesg for init message
+- [x] Unload (rmmod) → Inspect dmesg for exit message
+- [x] Confirm no kernel warnings (dmesg -T | grep -i warn)
+- [x] Add Lint to ensure good code quality.
 ## T1 - Test Module
 Goal: Ensure device nodes and sysfs entries are correctly registered
 - [ ] Build without warnings
