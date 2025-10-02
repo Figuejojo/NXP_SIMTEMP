@@ -1,2 +1,3 @@
-# suppress missing Linux kernel includes for nxp_simtemp.h
-missingIncludeSystem:../kernel/nxp_simtemp.h
+# suppress missing Linux kernel includes
+missingIncludeSystem:../kernel/nxp_simtemp_main.h
+missingIncludeSystem:../kernel/nxp_simtemp_helpers.h

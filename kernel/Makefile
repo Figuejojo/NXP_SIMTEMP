@@ -4,6 +4,7 @@
 # THis makefile is for compiling the simtemp module.
 
 obj-m := nxp_simtemp.o
+nxp_simtemp-objs := nxp_simtemp_main.o nxp_simtemp_helpers.o
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
 SRC  := $(shell pwd)

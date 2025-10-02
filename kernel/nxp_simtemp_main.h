@@ -13,9 +13,17 @@
 #ifndef _NXP_SIMTEMP_H_
 #define _NXP_SIMTEMP_H_
 
+ /***********************************************
+ *  Linux Includes
+ ***********************************************/
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/workqueue.h>
+#include <linux/jiffies.h>
 
+ /***********************************************
+ *  Local Includes
+ ***********************************************/
 
 #endif //_NXP_SIMTEMP_H_
