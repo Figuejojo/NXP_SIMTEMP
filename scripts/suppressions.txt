@@ -1,3 +1,1 @@
 # suppress missing Linux kernel includes
-missingIncludeSystem:../kernel/nxp_simtemp_main.h
-missingIncludeSystem:../kernel/nxp_simtemp_helpers.h

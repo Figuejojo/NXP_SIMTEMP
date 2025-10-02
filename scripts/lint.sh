@@ -7,6 +7,7 @@
 FILES_TO_CHECK=(
   "../kernel/nxp_simtemp_main.c"
   "../kernel/nxp_simtemp_helpers.c"
+  "../kernel/nxp_simtemp_chardev.c"
 )
 
 # Run cppcheck with your desired options
@@ -15,7 +16,9 @@ FILES_TO_CHECK=(
 cppcheck --enable=all \
   "${FILES_TO_CHECK[@]}"  \
   --suppressions-list=suppressions.txt \
-  --error-exitcode=1
+  --inline-suppr \
+  --language=c --std=c17 \
+  --error-exitcode=1 \
 
 # Check the exit code of the previous command (cppcheck)
 if [ $? -ne 0 ]; then

@@ -14,12 +14,13 @@
  ***********************************************/
 #include "nxp_simtemp_main.h"
 #include "nxp_simtemp_helpers.h"
+#include "nxp_simtemp_chardev.h"
 
 /***********************************************
  *  Definitions
  ***********************************************/
 #define DRV_VERSION "0.1.0"
-#define DRV_NAME "NXP_simtmep"
+#define DRV_NAME "simtmep"
 #define DEF_SAMPLE_RATE_MS (1000)
 
 /***********************************************
@@ -45,6 +46,7 @@ static void __exit nxp_simtemp_exit(void) ;
 /***********************************************
  *  Static Variables
  ***********************************************/
+static struct simtemp_device *g_simtemp_dev;
 static struct workqueue_struct *nxp_simtemp_wq;
 static struct delayed_work      nxp_simtemp_work;
 
@@ -59,13 +61,25 @@ static struct delayed_work      nxp_simtemp_work;
  */
 static void nxp_simtemp_workfn(struct work_struct * work)
 {
-    // TODO: Erase - Just for Development
-    long temp_mC = get_normal_temperature_mC();
-    pr_info("[%s]: temp=%ldmC",DRV_NAME,temp_mC);
+  char newmsg[50];
 
-    // Reschedule The Work Function.
-    queue_delayed_work(nxp_simtemp_wq, &nxp_simtemp_work,
-                        msecs_to_jiffies(max(1u, sampling_ms)));
+  long temp_mC = get_normal_temperature_mC();
+
+  char iso_time[32];
+  ts_iso8601_now(iso_time,sizeof(iso_time));
+
+  snprintf(newmsg, sizeof(newmsg), "%s temp=%ld.%ldC alert=0\n",
+          iso_time, (temp_mC / 1000), (temp_mC % 1000));
+
+  if(0 < nxp_simtemp_cdev_set_message(g_simtemp_dev, newmsg))
+  {
+    pr_info("[%s]: Temp: Failed to Update\n",DRV_NAME);
+  }
+  pr_info("[%s]: Temp: Updated\n",DRV_NAME);
+
+  // Reschedule The Work Function.
+  queue_delayed_work(nxp_simtemp_wq, &nxp_simtemp_work,
+                      msecs_to_jiffies(max(1u, sampling_ms)));
 }
 
 /**
@@ -78,21 +92,29 @@ static void nxp_simtemp_workfn(struct work_struct * work)
  */
 static int __init nxp_simtemp_init(void)
 {
-    printk(KERN_INFO "[%s]: Initializing Module\n",DRV_NAME);
+  int ret;
+  printk(KERN_INFO "[%s]: Initializing Module\n",DRV_NAME);
 
-    // Create a single-thread workqueue (Max 1 Thread)
-    nxp_simtemp_wq = alloc_workqueue(DRV_NAME, WQ_UNBOUND | WQ_FREEZABLE, 1);
-    if(!nxp_simtemp_wq)
+  ret = nxp_simtemp_cdev_create(NULL, &g_simtemp_dev);
+  if (ret)
     {
-        // If there is a memory allocation error.
-        pr_err("[%s]: Failed to create workqueue\n",DRV_NAME);
-        return -ENOMEM;
-    }
+    pr_err("[%s] failed to create /dev/simtemp: %d\n",DRV_NAME, ret);
+    return ret;
+  }
 
-    INIT_DELAYED_WORK(&nxp_simtemp_work, nxp_simtemp_workfn);
-    queue_delayed_work(nxp_simtemp_wq, &nxp_simtemp_work,
-                        msecs_to_jiffies(max(1u,sampling_ms)));
-    return 0;
+  // Create a single-thread workqueue (Max 1 Thread)
+  nxp_simtemp_wq = alloc_workqueue(DRV_NAME, WQ_UNBOUND | WQ_FREEZABLE, 1);
+  if(!nxp_simtemp_wq)
+  {
+    // If there is a memory allocation error.
+    pr_err("[%s]: Failed to create workqueue\n",DRV_NAME);
+    return -ENOMEM;
+  }
+
+  INIT_DELAYED_WORK(&nxp_simtemp_work, nxp_simtemp_workfn);
+  queue_delayed_work(nxp_simtemp_wq, &nxp_simtemp_work,
+                      msecs_to_jiffies(max(1u,sampling_ms)));
+  return 0;
 }
 
 /**
@@ -103,17 +125,16 @@ static int __init nxp_simtemp_init(void)
  */
 static void __exit nxp_simtemp_exit(void)
 {
-    printk(KERN_INFO "[%s]: Unloading Module\n",DRV_NAME);
+  printk(KERN_INFO "[%s]: Unloading Module\n",DRV_NAME);
 
-    if(nxp_simtemp_wq)
-    {
-        printk("[%s]: Exit - Closing Work Resources",DRV_NAME);
-        cancel_delayed_work_sync(&nxp_simtemp_work);
-        destroy_workqueue(nxp_simtemp_wq);
-    }
+  nxp_simtemp_cdev_destroy(g_simtemp_dev);
 
-    printk("[%s]: Exit - Module Unloaded",DRV_NAME);
-
+  if(nxp_simtemp_wq)
+  {
+    printk("[%s]: Exit - Closing Work Resources",DRV_NAME);
+    cancel_delayed_work_sync(&nxp_simtemp_work);
+    destroy_workqueue(nxp_simtemp_wq);
+  }
 }
 
 module_init(nxp_simtemp_init);

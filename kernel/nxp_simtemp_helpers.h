@@ -17,19 +17,30 @@
  /***********************************************
  *  Linux Includes
  ***********************************************/
+// cppcheck-suppress-begin missingIncludeSystem
 #include <linux/timekeeping.h>
 #include <linux/time64.h>
 #include <linux/random.h> 
 #include <linux/math.h>
+// cppcheck-suppress-end missingIncludeSystem
 
  /***********************************************
  *  Function Declarations
  ***********************************************/
- /**
+/**
  * @brief Generate a gausian random temperature.
  *
  * @return Temperature Value.
  */
 long get_normal_temperature_mC(void);
+
+/**
+ * @brief Get the current Date and time in iso8601 foramt.
+ *        Format use for the timestmap.
+ *
+ * @param[out] buf String Ptr in ISO8601 time format.
+ * @param[in]  buflen String length (Recommended 25).
+ */
+void ts_iso8601_now(char *buf, size_t buflen);
 
 #endif // _NXP_SIMTEMP_HELPERS_h_
