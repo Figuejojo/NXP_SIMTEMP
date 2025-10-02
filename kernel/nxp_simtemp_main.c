@@ -12,7 +12,8 @@
  /***********************************************
  *  Includes
  ***********************************************/
-#include "nxp_simtemp.h"
+#include "nxp_simtemp_main.h"
+#include "nxp_simtemp_helpers.h"
 
 /***********************************************
  *  Definitions
@@ -20,6 +21,7 @@
 #define DRV_VERSION "0.1.0"
 #define DRV_NAME "NXP_simtmep"
 #define DEF_SAMPLE_RATE_MS (1000)
+
 /***********************************************
  *  Module Information
  ***********************************************/
@@ -58,7 +60,8 @@ static struct delayed_work      nxp_simtemp_work;
 static void nxp_simtemp_workfn(struct work_struct * work)
 {
     // TODO: Erase - Just for Development
-    pr_info("[%s]: temp=20.5C",DRV_NAME);
+    long temp_mC = get_normal_temperature_mC();
+    pr_info("[%s]: temp=%ldmC",DRV_NAME,temp_mC);
 
     // Reschedule The Work Function.
     queue_delayed_work(nxp_simtemp_wq, &nxp_simtemp_work,
@@ -75,7 +78,7 @@ static void nxp_simtemp_workfn(struct work_struct * work)
  */
 static int __init nxp_simtemp_init(void)
 {
-    printk(KERN_INFO "[%s] : Initializing Module\n",DRV_NAME);
+    printk(KERN_INFO "[%s]: Initializing Module\n",DRV_NAME);
 
     // Create a single-thread workqueue (Max 1 Thread)
     nxp_simtemp_wq = alloc_workqueue(DRV_NAME, WQ_UNBOUND | WQ_FREEZABLE, 1);
@@ -101,12 +104,16 @@ static int __init nxp_simtemp_init(void)
 static void __exit nxp_simtemp_exit(void)
 {
     printk(KERN_INFO "[%s]: Unloading Module\n",DRV_NAME);
+
     if(nxp_simtemp_wq)
     {
-        pr_info("[%s]: Exit - Closing Work Resources",DRV_NAME);
+        printk("[%s]: Exit - Closing Work Resources",DRV_NAME);
         cancel_delayed_work_sync(&nxp_simtemp_work);
         destroy_workqueue(nxp_simtemp_wq);
     }
+
+    printk("[%s]: Exit - Module Unloaded",DRV_NAME);
+
 }
 
 module_init(nxp_simtemp_init);
