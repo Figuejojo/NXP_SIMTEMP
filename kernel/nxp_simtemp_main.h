@@ -16,11 +16,13 @@
  /***********************************************
  *  Linux Includes
  ***********************************************/
+// cppcheck-suppress-begin missingIncludeSystem
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/workqueue.h>
 #include <linux/jiffies.h>
+// cppcheck-suppress-end missingIncludeSystem
 
  /***********************************************
  *  Local Includes

@@ -12,13 +12,14 @@
 /***********************************************
  *  Linux Includes
  ***********************************************/
+ // cppcheck-suppress-begin missingIncludeSystem
 #include <linux/module.h>
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/minmax.h>
-
+// cppcheck-suppress-end missingIncludeSystem
 
 
 /***********************************************

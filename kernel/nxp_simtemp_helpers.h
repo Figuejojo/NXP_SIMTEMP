@@ -17,10 +17,12 @@
  /***********************************************
  *  Linux Includes
  ***********************************************/
+// cppcheck-suppress-begin missingIncludeSystem
 #include <linux/timekeeping.h>
 #include <linux/time64.h>
 #include <linux/random.h> 
 #include <linux/math.h>
+// cppcheck-suppress-end missingIncludeSystem
 
  /***********************************************
  *  Function Declarations
