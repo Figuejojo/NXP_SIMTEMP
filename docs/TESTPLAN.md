@@ -9,9 +9,10 @@ Goal: Verify the module can be built, loaded, and unloaded cleanly.
 - [x] Add Lint to ensure good code quality.
 ## T1 - Test Module
 Goal: Ensure device nodes and sysfs entries are correctly registered
-- [ ] Build without warnings
-- [ ] Load the module
-- [ ] Confirm /dev/simtemp
+- [x] Build without warnings
+- [x] Load the module
+- [x] Confirm /dev/simtemp
+- [x] cat /dev/simtemp
 - [ ] Confirm sysfs attributes (/sys/class/...) exist
 - [ ] Unload and confirm cleanup (no lingering device nodes or sysfs entries)
 ## T2 Data Generation
