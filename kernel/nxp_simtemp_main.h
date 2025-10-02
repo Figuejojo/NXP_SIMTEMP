@@ -13,9 +13,9 @@
 #ifndef _NXP_SIMTEMP_H_
 #define _NXP_SIMTEMP_H_
 
- /***********************************************
- *  Linux Includes
- ***********************************************/
+/***********************************************
+*  Linux Includes
+***********************************************/
 // cppcheck-suppress-begin missingIncludeSystem
 #include <linux/init.h>
 #include <linux/module.h>
@@ -24,8 +24,8 @@
 #include <linux/jiffies.h>
 // cppcheck-suppress-end missingIncludeSystem
 
- /***********************************************
- *  Local Includes
- ***********************************************/
+/***********************************************
+*  Local Includes
+***********************************************/
 
 #endif //_NXP_SIMTEMP_H_
