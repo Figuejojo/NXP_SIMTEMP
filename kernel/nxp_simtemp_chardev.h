@@ -19,6 +19,9 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/minmax.h>
+#include <linux/poll.h>
+#include <linux/mutex.h>
+#include <linux/wait.h>
 // cppcheck-suppress-end missingIncludeSystem
 
 
@@ -30,7 +33,7 @@ struct simtemp_device;
 /***********************************************
  *  Function Declarations
  ***********************************************/
-/**
+ /**
  * @brief Create /dev/simtemp.
  *
  * @param parent parent device (platform driver or class device struct).
@@ -48,11 +51,11 @@ int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out);
 void nxp_simtemp_cdev_destroy(struct simtemp_device *dev);
 
 /**
- * @brief Update the message to be returned by reads.
+ * @brief Push new sampel and wake up poll.
  *
  * @param dev Ptr to the device object.
  * @param msg Message ready to be read.
  */
-int nxp_simtemp_cdev_set_message(struct simtemp_device *dev, const char *msg);
+int nxp_simtemp_cdev_push_sample(struct simtemp_device *dev, const char *msg);
 
 #endif //_NXP_SIMTEMP_HELPERS_CHARDEV_h_
