@@ -22,8 +22,8 @@
 #include <linux/poll.h>
 #include <linux/mutex.h>
 #include <linux/wait.h>
+#include <linux/device.h>
 // cppcheck-suppress-end missingIncludeSystem
-
 
 /***********************************************
  *  ENUMS and Sructs
@@ -57,5 +57,25 @@ void nxp_simtemp_cdev_destroy(struct simtemp_device *dev);
  * @param msg Message ready to be read.
  */
 int nxp_simtemp_cdev_push_sample(struct simtemp_device *dev, const char *msg);
+
+/**
+ * @brief Set new sample time.
+ *
+ * @param dev Ptr to the device object.
+ * @param time_ms Sample time in Ms.
+ *
+ * @return < 0 for any error code.
+ */
+int nxp_simtemp_chardev_set_sampling_ms(struct simtemp_device *dev, unsigned int time_ms);
+
+/**
+ * @brief Get current sample time.
+ *
+ * @param dev Ptr to the device object.
+ *
+ * @return sample in ms
+ */
+unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev);
+
 
 #endif //_NXP_SIMTEMP_HELPERS_CHARDEV_h_

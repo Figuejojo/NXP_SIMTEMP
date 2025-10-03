@@ -1,10 +1,7 @@
 /**
- * @file nxp_simtemp.h
- * @brief Main header file for the nxp_siimtep.
+ * @file nxp_simtemp_common.h
+ * @brief Common header file for the nxp_simtep.
  *
- * This file contains the declarations for the MyClass class and the
- * other public functions that are part of the library's API.
- * The detailed implementation can be found in `my_library.cpp`.
  *
  * @author Jose Jorge Figueroa Figueroa
  * @author https://github.com/Figuejojo
@@ -24,8 +21,17 @@
 #include <linux/jiffies.h>
 // cppcheck-suppress-end missingIncludeSystem
 
+
 /***********************************************
-*  Local Includes
-***********************************************/
+ *  Definitions
+ ***********************************************/
+/* --- Common Driver Definitions --- */
+#define DRV_NAME "simtmep"
+#define DRV_VERSION "0.1.0"
+
+/* --- Sample Time Driver Definitions --- */
+#define DEF_SAMPLE_RATE_MS (1000)
+#define MAX_SAMPLE_RATE_MS (3600000)
+#define MIN_SAMPLE_RATE_MS (1)
 
 #endif //_NXP_SIMTEMP_H_
