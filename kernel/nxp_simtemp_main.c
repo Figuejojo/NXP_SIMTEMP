@@ -71,7 +71,7 @@ static void nxp_simtemp_workfn(struct work_struct * work)
   snprintf(newmsg, sizeof(newmsg), "%s temp=%ld.%ldC alert=0\n",
           iso_time, (temp_mC / 1000), (temp_mC % 1000));
 
-  if(0 < nxp_simtemp_cdev_set_message(g_simtemp_dev, newmsg))
+  if(0 < nxp_simtemp_cdev_push_sample(g_simtemp_dev, newmsg))
   {
     pr_info("[%s]: Temp: Failed to Update\n",DRV_NAME);
   }

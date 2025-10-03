@@ -28,56 +28,166 @@ typedef struct simtemp_device
   /* Msg buffer returned on read (user-visible). */
   char   *msg;
   size_t  msg_len;
+
+  /* Queue for reader waiting for data (poll)*/
+  wait_queue_head_t wq;
+
+  /* Synchronization */
+  struct mutex lock;  // Protects msg during read/push
+  u32 seq;            // Incremental on every push
 }simtemp_dev_t;
 
 static simtemp_dev_t *g_sdev;
+
+// Pre-Open context for each File Descriptor
+struct simtemp_file_ctx
+{
+  struct simtemp_device *dev;
+  u32 seen_flag;
+};
+
 /***********************************************
  *  Static Function Prototypes
  ***********************************************/
+static int simtemp_open(struct inode *inode, struct file *filp);
+static ssize_t simtemp_read(struct file *filp, char __user *ubuf,
+                            size_t count, loff_t *ppos);
+static int simtemp_release(struct inode *inode, struct file *filp);
+static __poll_t simtemp_poll(struct file *filp, poll_table *wait);
+static int nxp_simtemp_cdev_set_message(struct simtemp_device *dev, const char *msg);
 
 /***********************************************
  *  Static Functions
  ***********************************************/
+ static const struct file_operations simtemp_fops = {
+  .owner   = THIS_MODULE,
+  .open    = simtemp_open,
+  .release = simtemp_release,
+  .read    = simtemp_read,
+  .poll    = simtemp_poll,
+  .llseek  = no_llseek,
+};
+
 /* ---------- file operations ---------- */
+/**
+ * @details Handle Openings.
+ */
 static int simtemp_open(struct inode *inode, struct file *filp)
 {
-  filp->private_data = g_sdev;
+  struct simtemp_file_ctx *ctx;
+
+  if(!g_sdev) return -ENODEV;
+
+  ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+  if(!ctx) return -ENOMEM;
+
+  ctx->dev = g_sdev;
+
+  {// Critical section
+    mutex_lock(&g_sdev->lock);
+    ctx->seen_flag = (READ_ONCE(g_sdev->seq) > 0) ? (READ_ONCE(g_sdev->seq) - 1) : 0;
+    mutex_unlock(&g_sdev->lock);
+  }
+
+  filp->private_data = ctx;
   return 0;
 }
 
+/**
+ * @details Handle Reading.
+ */
 static ssize_t simtemp_read(struct file *filp, char __user *ubuf,
                             size_t count, loff_t *ppos)
 {
-  struct simtemp_device *sdev = filp->private_data ? : g_sdev;
-  size_t remaining, to_copy;
+  struct simtemp_file_ctx *ctx = filp->private_data;
+  struct simtemp_device *sdev;
+  size_t to_copy;
+  u32 this_seq;
 
-  if (!sdev || !sdev->msg)  return -ENODEV;
+  if(!ctx || !(sdev = ctx->dev)) return -ENODEV;
 
-  if (*ppos >= sdev->msg_len) return 0;
+  if (ctx->seen_flag == READ_ONCE(sdev->seq))
+  {
+    if(filp->f_flags & O_NONBLOCK) return -EAGAIN;
 
-  remaining = sdev->msg_len - *ppos;
-  to_copy   = min(count, remaining);
+    /* Sleep until seq changes (i.e., a push_sample happens). */
+    if (wait_event_interruptible(sdev->wq, ctx->seen_flag != READ_ONCE(sdev->seq)))
+    {
+      return -ERESTARTSYS;
+    }
+  }
 
-  if (copy_to_user(ubuf, sdev->msg + *ppos, to_copy)) return -EFAULT;
+  { // Critical Section
+    mutex_lock(&sdev->lock);
+    this_seq = sdev->seq;
+
+    // Reset Position for new sample
+    if(*ppos > 0) *ppos = 0;
+
+    if (*ppos >= sdev->msg_len)
+    {
+      // This fault is almost imposible.
+      ctx->seen_flag = this_seq;
+      mutex_unlock(&sdev->lock);
+      return 0; // Return EOF
+    }
+
+    to_copy = min(count, sdev->msg_len - (size_t)*ppos);
+
+    if (copy_to_user(ubuf, sdev->msg + *ppos, to_copy))
+    {
+      mutex_unlock(&sdev->lock);
+      return -EFAULT;
+    }
+
+    *ppos+= to_copy;
+
+    // Called has seen the message, mark as read.
+    if(*ppos >= sdev->msg_len)
+    {
+      ctx->seen_flag = this_seq;
+    }
+
+    mutex_unlock(&sdev->lock);
+  }
+
 
   *ppos += to_copy;
   return to_copy;
 }
 
-static const struct file_operations simtemp_fops = {
-  .owner = THIS_MODULE,
-  .open  = simtemp_open,
-  .read  = simtemp_read,
-  .llseek = no_llseek,
-};
-
-/***********************************************
- *  Public Functions
- ***********************************************/
- /**
- * @details Set messages to be picket by /dev/ read access.
+/**
+ * @details Handle releases.
  */
-int nxp_simtemp_cdev_set_message(struct simtemp_device *dev, const char *msg)
+static int simtemp_release(struct inode *inode, struct file *filp)
+{
+  kfree(filp->private_data);
+  return 0;
+}
+
+/**
+ * @details Handle Poll access.
+ */
+static __poll_t simtemp_poll(struct file *filp, poll_table *wait)
+{
+  struct simtemp_file_ctx *ctx = filp->private_data;
+  struct simtemp_device *sdev;
+
+  if(!ctx) return EPOLLERR;
+  sdev = ctx->dev;
+
+  poll_wait(filp, &sdev->wq, wait);
+
+  if(READ_ONCE(sdev->seq) != ctx->seen_flag) return EPOLLIN | EPOLLRDNORM;
+
+  return 0;
+}
+
+/* ---------- Message Functions ---------- */
+/**
+ * @details Set messages to be picked by /dev/ read access.
+ */
+static int nxp_simtemp_cdev_set_message(struct simtemp_device *dev, const char *msg)
 {
   char *newbuf;
   size_t len;
@@ -88,9 +198,36 @@ int nxp_simtemp_cdev_set_message(struct simtemp_device *dev, const char *msg)
   newbuf = kmemdup_nul(msg, len, GFP_KERNEL);
   if (!newbuf)  return -ENOMEM;
 
-  kfree(dev->msg);
-  dev->msg = newbuf;
-  dev->msg_len = len;
+  { // Critical Section
+    mutex_lock(&dev->lock);
+    kfree(dev->msg);
+    dev->msg = newbuf;
+    dev->msg_len = len;
+    mutex_unlock(&dev->lock);
+  }
+  return 0;
+}
+/***********************************************
+ *  Public Functions
+ ***********************************************/
+/**
+ * @details Push Fresh sample and wake-up poll.
+ */
+int nxp_simtemp_cdev_push_sample(struct simtemp_device *dev, const char *msg)
+{
+  int ret;
+  if(!dev) return -ENODEV;
+
+  ret = nxp_simtemp_cdev_set_message(dev, msg);
+  if(ret) return ret;
+
+  {// Critical Section
+    mutex_lock(&dev->lock);
+    dev->seq++;
+    mutex_unlock(&dev->lock);
+  }
+  // Notify Poll
+  wake_up_interruptible(&dev->wq);
   return 0;
 }
 
@@ -117,6 +254,10 @@ int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out)
   dev->miscdev.mode  = 0444;
   dev->parent        = parent;
 
+  mutex_init(&dev->lock);
+  init_waitqueue_head(&dev->wq);
+  dev->seq = 0;
+
   ret = misc_register(&dev->miscdev);
   if (ret) {
     kfree(dev);
@@ -124,7 +265,7 @@ int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out)
   }
 
   /* Initial Value - Place Holder*/
-  ret = nxp_simtemp_cdev_set_message(dev, "2025-09-22T20:15:04.123Z temp=0 alert=0\n");
+  ret = nxp_simtemp_cdev_push_sample(dev, "2025-09-22T20:15:04.123Z temp=0 alert=0\n");
   if (ret) {
     misc_deregister(&dev->miscdev);
     kfree(dev);
