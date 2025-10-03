@@ -12,16 +12,9 @@
  /***********************************************
  *  Includes
  ***********************************************/
-#include "nxp_simtemp_main.h"
+#include "nxp_simtemp_common.h"
 #include "nxp_simtemp_helpers.h"
 #include "nxp_simtemp_chardev.h"
-
-/***********************************************
- *  Definitions
- ***********************************************/
-#define DRV_VERSION "0.1.0"
-#define DRV_NAME "simtmep"
-#define DEF_SAMPLE_RATE_MS (1000)
 
 /***********************************************
  *  Module Information
@@ -34,7 +27,6 @@ MODULE_VERSION(DRV_VERSION);
 /***********************************************
  *  Global Variables
  ***********************************************/
- unsigned int sampling_ms = DEF_SAMPLE_RATE_MS;
 
 /***********************************************
  *  Static Function Prototypes
@@ -78,8 +70,9 @@ static void nxp_simtemp_workfn(struct work_struct * work)
   pr_info("[%s]: Temp: Updated\n",DRV_NAME);
 
   // Reschedule The Work Function.
+  unsigned int curr_sampling_ms = nxp_simtemp_chardev_get_sampling_ms(g_simtemp_dev);
   queue_delayed_work(nxp_simtemp_wq, &nxp_simtemp_work,
-                      msecs_to_jiffies(max(1u, sampling_ms)));
+                      msecs_to_jiffies(max(1u, curr_sampling_ms)));
 }
 
 /**
@@ -113,7 +106,7 @@ static int __init nxp_simtemp_init(void)
 
   INIT_DELAYED_WORK(&nxp_simtemp_work, nxp_simtemp_workfn);
   queue_delayed_work(nxp_simtemp_wq, &nxp_simtemp_work,
-                      msecs_to_jiffies(max(1u,sampling_ms)));
+                      msecs_to_jiffies(max(1u,DEF_SAMPLE_RATE_MS)));
   return 0;
 }
 
