@@ -14,6 +14,7 @@
 /***********************************************
  *  Includes
  ***********************************************/
+#include "nxp_simtemp_common.h"
 #include "nxp_simtemp_helpers.h"
 
 /***********************************************
@@ -21,11 +22,17 @@
  ***********************************************/
 #define TEMP_GAUSS_MEAN_mC          (30000)
 #define TEMP_GAUSS_SIGMA_NORMAL_mC  (3000)
+#define TEMP_GAUSS_SIGMA_NOISY_mC   (7000)
+
+#define TEMP_RAMP_MAX_mC  (100000)
+#define TEMP_RAMP_INC_mC  (3000)
+#define TEMP_RAMP_INIT_mC (0)
 
 /***********************************************
  *  Static Function Prototypes
  ***********************************************/
 static long get_gauss_rand_temp_mC(long mean_milli, long std_dev_milli);
+static long get_ramp_temp_mC(void);
 
 /***********************************************
  *  Static Functions
@@ -81,6 +88,18 @@ static long get_gauss_rand_temp_mC(long mean_milli, long std_dev_milli)
   return rand_norm + mean_milli;
 }
 
+/**
+ * @details Generate a temperature ramp in mC
+ *
+ * @return Temperature value in milliCelsius
+ */
+static long get_ramp_temp_mC()
+{
+  static long temp = TEMP_RAMP_INIT_mC;
+  temp = (temp > TEMP_RAMP_MAX_mC) ? TEMP_RAMP_INIT_mC : temp + TEMP_RAMP_INC_mC;
+  return temp;
+}
+
 /***********************************************
  *  Functions
  ***********************************************/
@@ -88,10 +107,21 @@ static long get_gauss_rand_temp_mC(long mean_milli, long std_dev_milli)
  * @details Produce a random temperature basedo on `#TEMP_GAUSS_MEAN_mC`
  *          and `#TEMP_GAUSS_SIGMA_NORMAL_mC`
  */
-long get_normal_temperature_mC(void)
+long get_temperature_mC(simtemp_modes_e mode)
 {
-  // Simulate a temperature reading with a mean of 25.0°C and std dev of 3.0°C
-  return get_gauss_rand_temp_mC(TEMP_GAUSS_MEAN_mC, TEMP_GAUSS_SIGMA_NORMAL_mC);
+  switch (mode)
+  {
+    case eNORMAL:
+    default:
+      return get_gauss_rand_temp_mC(TEMP_GAUSS_MEAN_mC, TEMP_GAUSS_SIGMA_NORMAL_mC);
+      break;
+    
+    case eNOISY:
+      return get_gauss_rand_temp_mC(TEMP_GAUSS_MEAN_mC, TEMP_GAUSS_SIGMA_NOISY_mC);
+
+    case eRAMP:
+      return get_ramp_temp_mC();  
+  }
 }
 
 /**
