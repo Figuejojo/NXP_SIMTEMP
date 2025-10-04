@@ -61,8 +61,20 @@ static void nxp_simtemp_workfn(struct work_struct * work)
   char iso_time[32];
   ts_iso8601_now(iso_time,sizeof(iso_time));
 
-  snprintf(newmsg, sizeof(newmsg), "%s temp=%ld.%ldC alert=0\n",
-          iso_time, (temp_mC / 1000), (temp_mC % 1000));
+  unsigned int th_mc = nxp_simtemp_cdev_get_threshold_mC(g_simtemp_dev);
+
+  {// Place Holder For alarm implementation
+    if(temp_mC > th_mc)
+    {
+      snprintf(newmsg, sizeof(newmsg), "%s temp=%ldmC alert=0\n",
+        iso_time, temp_mC);
+    }
+    else
+    {
+      snprintf(newmsg, sizeof(newmsg), "%s temp=%ldmC alert=1\n",
+        iso_time, temp_mC);
+    }
+  }
 
   if(0 < nxp_simtemp_cdev_push_sample(g_simtemp_dev, newmsg))
   {
