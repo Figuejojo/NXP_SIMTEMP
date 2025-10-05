@@ -27,7 +27,7 @@
  ***********************************************/
 /* --- Common Driver Definitions --- */
 #define DRV_NAME "simtmep"
-#define DRV_VERSION "0.1.5"
+#define DRV_VERSION "0.1.6"
 
 /* --- Sample Time Driver Definitions --- */
 #define DEF_SAMPLE_RATE_MS (1000)
