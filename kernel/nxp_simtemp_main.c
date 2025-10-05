@@ -66,11 +66,13 @@ static void nxp_simtemp_workfn(struct work_struct * work)
   {// Place Holder For alarm implementation
     if(temp_mC > th_mc)
     {
+      nxp_simtemp_cdev_set_state(g_simtemp_dev, eST_NORMAL);
       snprintf(newmsg, sizeof(newmsg), "%s temp=%ldmC alert=0\n",
         iso_time, temp_mC);
     }
     else
     {
+      nxp_simtemp_cdev_set_state(g_simtemp_dev, eST_THRESH);
       snprintf(newmsg, sizeof(newmsg), "%s temp=%ldmC alert=1\n",
         iso_time, temp_mC);
     }

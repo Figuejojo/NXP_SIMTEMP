@@ -48,4 +48,12 @@ typedef enum
   eEND
 }simtemp_modes_e;
 
+typedef enum
+{
+  eST_ERROR  = -1,
+  eST_NORMAL = 0,
+  eST_THRESH = 1,
+  eST_END
+}simtemp_state_e;
+
 #endif //_NXP_SIMTEMP_H_
