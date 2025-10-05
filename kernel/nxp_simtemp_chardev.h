@@ -77,5 +77,24 @@ int nxp_simtemp_chardev_set_sampling_ms(struct simtemp_device *dev, unsigned int
  */
 unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev);
 
+/**
+ * @brief Set new mode.
+ *
+ * @param dev Ptr to the device object.
+ * @param mode Mode to be set.
+ *
+ * @return < 0 for any error code.
+ */
+int nxp_simtemp_chardev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode);
+
+/**
+ * @brief Get current mode.
+ *
+ * @param dev Ptr to the device object.
+ *
+ * @return current mode.
+ */
+unsigned int nxp_simtemp_chardev_get_mode(struct simtemp_device *dev);
+
 
 #endif //_NXP_SIMTEMP_HELPERS_CHARDEV_h_

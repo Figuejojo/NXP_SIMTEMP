@@ -28,11 +28,14 @@
  *  Function Declarations
  ***********************************************/
 /**
- * @brief Generate a gausian random temperature.
- *
+ * @brief Generate a temperature value.
+ *        Generation Modes:
+ *          0 - NORMAL
+ *          1 - NOISY
+ *          2 - RAMP   
  * @return Temperature Value.
  */
-long get_normal_temperature_mC(void);
+long get_temperature_mC(simtemp_modes_e mode);
 
 /**
  * @brief Get the current Date and time in iso8601 foramt.

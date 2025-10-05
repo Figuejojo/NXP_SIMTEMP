@@ -38,6 +38,7 @@ typedef struct simtemp_device
   u32 seq;            // Incremental on every push
 
   unsigned int sampling_ms; /* Default 1000 */
+  simtemp_modes_e mode;
 
 }simtemp_dev_t;
 
@@ -50,6 +51,12 @@ struct simtemp_file_ctx
   u32 seen_flag;
 };
 
+//Must match with elements in simtemp_modes_e
+const char *mode_names[eEND] = {
+                            "0 - Normal",
+                            "1 - Noisy",
+                            "2 - Ramp",
+                          };
 /***********************************************
  *  Static Function Prototypes
  ***********************************************/
@@ -155,7 +162,6 @@ static ssize_t simtemp_read(struct file *filp, char __user *ubuf,
     mutex_unlock(&sdev->lock);
   }
 
-
   *ppos += to_copy;
   return to_copy;
 }
@@ -187,6 +193,37 @@ static __poll_t simtemp_poll(struct file *filp, poll_table *wait)
   return 0;
 }
 /* ---------- Sys Attribute Functions ---------- */
+/* ---------- Sys/mode Functions ---------- */
+// cppcheck-suppress-begin unusedFunction
+static ssize_t mode_show(struct device *d,
+                                struct device_attribute *attr, char *buf)
+{
+  //Mode Change this
+  struct simtemp_device *dev = g_sdev;
+  unsigned int mode = nxp_simtemp_chardev_get_mode(dev);
+  return scnprintf(buf, PAGE_SIZE, "%s\n", mode_names[mode]);
+}
+
+static ssize_t mode_store(struct device *d,
+                                 struct device_attribute *attr,
+                                 const char *buf, size_t count)
+{
+  //MODE: Change this 
+  struct simtemp_device *dev = g_sdev;
+  unsigned int mode;
+
+  int ret = kstrtouint(buf, 0, &mode);
+  if (ret) return ret;
+
+  ret = nxp_simtemp_chardev_set_mode(dev, (simtemp_modes_e)mode);
+  if (ret) return ret;
+
+  return count;
+}
+// cppcheck-suppress-end unusedFunction
+
+static DEVICE_ATTR_RW(mode);
+
 
 /* ---------- Sys/Sampling_ms Functions ---------- */
 // cppcheck-suppress-begin unusedFunction
@@ -302,6 +339,42 @@ unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev)
 }
 
 /**
+ * @details Set temperature mode.
+ */
+int nxp_simtemp_chardev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode)
+{
+
+  if (!dev) return -ENODEV;
+
+  if (mode < eNORMAL || mode > eEND) return -ERANGE;
+
+  { // Critial Section
+    mutex_lock(&dev->lock);
+    dev->mode = mode;
+    mutex_unlock(&dev->lock);
+  }
+
+  return 0;
+}
+
+/**
+ * @details Get temperature mode.
+ */
+unsigned int nxp_simtemp_chardev_get_mode(struct simtemp_device *dev)
+{
+  unsigned int val = 0;
+  if (!dev) return 0;
+
+  { // Critical Section
+    mutex_lock(&dev->lock);
+    val = (unsigned int)dev->mode;
+    mutex_unlock(&dev->lock);
+  }
+
+  return val;
+}
+
+/**
  * @details Create the character device /dev/ object.
  */
 int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out)
@@ -326,6 +399,7 @@ int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out)
   init_waitqueue_head(&dev->wq);
   dev->seq = 0;
   dev->sampling_ms = DEF_SAMPLE_RATE_MS;
+  dev->mode = eNORMAL;
 
   ret = misc_register(&dev->miscdev);
   if (ret)
@@ -342,11 +416,22 @@ int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out)
     return ret;
   }
 
+  ret = device_create_file(dev->miscdev.this_device, &dev_attr_mode);
+  if (ret)
+  {
+    device_remove_file(dev->miscdev.this_device, &dev_attr_sampling_ms);
+    misc_deregister(&dev->miscdev);
+    kfree(dev);
+    return ret;
+  }
+
+
   /* Initial Value - Place Holder*/
   ret = nxp_simtemp_cdev_push_sample(dev, "2025-09-22T20:15:04.123Z temp=0 alert=0\n");
   if (ret)
   {
     device_remove_file(dev->miscdev.this_device, &dev_attr_sampling_ms);
+    device_remove_file(dev->miscdev.this_device, &dev_attr_mode);
     misc_deregister(&dev->miscdev);
     kfree(dev);
     return ret;
@@ -370,6 +455,7 @@ void nxp_simtemp_cdev_destroy(struct simtemp_device *dev)
   if (!dev) return;
 
   device_remove_file(dev->miscdev.this_device, &dev_attr_sampling_ms);
+  device_remove_file(dev->miscdev.this_device, &dev_attr_mode);
 
   misc_deregister(&dev->miscdev);
   kfree(dev->msg);

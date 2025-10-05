@@ -55,7 +55,8 @@ static void nxp_simtemp_workfn(struct work_struct * work)
 {
   char newmsg[50];
 
-  long temp_mC = get_normal_temperature_mC();
+  simtemp_modes_e temp_mode = nxp_simtemp_chardev_get_mode(g_simtemp_dev);
+  long temp_mC = get_temperature_mC(temp_mode);
 
   char iso_time[32];
   ts_iso8601_now(iso_time,sizeof(iso_time));

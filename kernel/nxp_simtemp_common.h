@@ -27,11 +27,22 @@
  ***********************************************/
 /* --- Common Driver Definitions --- */
 #define DRV_NAME "simtmep"
-#define DRV_VERSION "0.1.0"
+#define DRV_VERSION "0.1.5"
 
 /* --- Sample Time Driver Definitions --- */
 #define DEF_SAMPLE_RATE_MS (1000)
 #define MAX_SAMPLE_RATE_MS (3600000)
 #define MIN_SAMPLE_RATE_MS (1)
+
+/***********************************************
+ *  ENUMS and Sructs
+ ***********************************************/
+typedef enum
+{
+  eNORMAL = 0,
+  eNOISY  = 1,
+  eRAMP   = 2,
+  eEND
+}simtemp_modes_e;
 
 #endif //_NXP_SIMTEMP_H_
