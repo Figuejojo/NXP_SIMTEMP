@@ -59,6 +59,25 @@ void nxp_simtemp_cdev_destroy(struct simtemp_device *dev);
 int nxp_simtemp_cdev_push_sample(struct simtemp_device *dev, const char *msg);
 
 /**
+ * @brief Set new threshold in mili-Celsius.
+ *
+ * @param dev Ptr to the device object.
+ * @param time_ms Sample time in mili-Celsius.
+ *
+ * @return < 0 for any error code.
+ */
+int nxp_simtemp_cdev_set_threshold_mC(struct simtemp_device *dev, unsigned int th_mC);
+
+/**
+ * @brief Set new threshold in mili-Celsius.
+ *
+ * @param dev Ptr to the device object.
+ *
+ * @return sample in ms
+ */
+int nxp_simtemp_cdev_get_threshold_mC(struct simtemp_device *dev);
+
+/**
  * @brief Set new sample time.
  *
  * @param dev Ptr to the device object.
