@@ -37,9 +37,11 @@ typedef struct simtemp_device
   struct mutex lock;  // Protects msg during read/push
   u32 seq;            // Incremental on every push
 
+  /* -- Sys Parameters -- */
   unsigned int sampling_ms;   /* Default 1000     */
   unsigned int threshold_mC;  /* Default 40000    */
   simtemp_modes_e mode;       /* Default 0-Normal */
+  simtemp_state_e state ;     /* Default Okay     */
 
 }simtemp_dev_t;
 
@@ -58,6 +60,7 @@ const char *mode_names[eEND] = {
                             "1 - Noisy",
                             "2 - Ramp",
                           };
+
 /***********************************************
  *  Static Function Prototypes
  ***********************************************/
@@ -201,7 +204,7 @@ static ssize_t mode_show(struct device *d,
 {
   //Mode Change this
   struct simtemp_device *dev = g_sdev;
-  unsigned int mode = nxp_simtemp_chardev_get_mode(dev);
+  unsigned int mode = nxp_simtemp_cdev_get_mode(dev);
   return scnprintf(buf, PAGE_SIZE, "%s\n", mode_names[mode]);
 }
 
@@ -216,7 +219,7 @@ static ssize_t mode_store(struct device *d,
   int ret = kstrtouint(buf, 0, &mode);
   if (ret) return ret;
 
-  ret = nxp_simtemp_chardev_set_mode(dev, (simtemp_modes_e)mode);
+  ret = nxp_simtemp_cdev_set_mode(dev, (simtemp_modes_e)mode);
   if (ret) return ret;
 
   return count;
@@ -261,7 +264,7 @@ static ssize_t sampling_ms_show(struct device *d,
                                 struct device_attribute *attr, char *buf)
 {
   struct simtemp_device *dev = g_sdev;
-  unsigned int time_ms = nxp_simtemp_chardev_get_sampling_ms(dev);
+  unsigned int time_ms = nxp_simtemp_cdev_get_sampling_ms(dev);
   return scnprintf(buf, PAGE_SIZE, "%u\n", time_ms);
 }
 
@@ -275,7 +278,7 @@ static ssize_t sampling_ms_store(struct device *d,
   int ret = kstrtouint(buf, 0, &ms);
   if (ret) return ret;
 
-  ret = nxp_simtemp_chardev_set_sampling_ms(dev, ms);
+  ret = nxp_simtemp_cdev_set_sampling_ms(dev, ms);
   if (ret) return ret;
 
   return count;
@@ -283,6 +286,19 @@ static ssize_t sampling_ms_store(struct device *d,
 // cppcheck-suppress-end unusedFunction
 
 static DEVICE_ATTR_RW(sampling_ms);
+
+/* ---------- Sys/mode Functions ---------- */
+// cppcheck-suppress-begin unusedFunction
+static ssize_t state_show(struct device *d,
+                                struct device_attribute *attr, char *buf)
+{
+  struct simtemp_device *dev = g_sdev;
+  simtemp_state_e state = nxp_simtemp_cdev_get_state(dev);
+  return scnprintf(buf, PAGE_SIZE, "%u\n", state);
+}
+// cppcheck-suppress-end unusedFunction
+
+static DEVICE_ATTR_RO(state);
 
 /* ---------- Message Functions ---------- */
 /**
@@ -368,7 +384,7 @@ int nxp_simtemp_cdev_get_threshold_mC(struct simtemp_device *dev)
 /**
  * @details Set sampling time in ms.
  */
-int nxp_simtemp_chardev_set_sampling_ms(struct simtemp_device *dev, unsigned int time_ms)
+int nxp_simtemp_cdev_set_sampling_ms(struct simtemp_device *dev, unsigned int time_ms)
 {
 
   if (!dev) return -ENODEV;
@@ -387,7 +403,7 @@ int nxp_simtemp_chardev_set_sampling_ms(struct simtemp_device *dev, unsigned int
 /**
  * @details Get sampling time in ms.
  */
-unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev)
+unsigned int nxp_simtemp_cdev_get_sampling_ms(struct simtemp_device *dev)
 {
   unsigned int val = 0;
   if (!dev) return 0;
@@ -404,7 +420,7 @@ unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev)
 /**
  * @details Set temperature mode.
  */
-int nxp_simtemp_chardev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode)
+int nxp_simtemp_cdev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode)
 {
 
   if (!dev) return -ENODEV;
@@ -423,7 +439,7 @@ int nxp_simtemp_chardev_set_mode(struct simtemp_device *dev, simtemp_modes_e mod
 /**
  * @details Get temperature mode.
  */
-unsigned int nxp_simtemp_chardev_get_mode(struct simtemp_device *dev)
+unsigned int nxp_simtemp_cdev_get_mode(struct simtemp_device *dev)
 {
   unsigned int val = 0;
   if (!dev) return 0;
@@ -431,6 +447,41 @@ unsigned int nxp_simtemp_chardev_get_mode(struct simtemp_device *dev)
   { // Critical Section
     mutex_lock(&dev->lock);
     val = (unsigned int)dev->mode;
+    mutex_unlock(&dev->lock);
+  }
+
+  return val;
+}
+
+/**
+ * @details Set the simtemp state.
+ */
+int nxp_simtemp_cdev_set_state(struct simtemp_device*dev, simtemp_state_e state)
+{
+  if (!dev) return -ENODEV;
+
+  if (state < eST_NORMAL || state > eST_END) return -ERANGE;
+
+  { // Critial Section
+    mutex_lock(&dev->lock);
+    dev->state = state;
+    mutex_unlock(&dev->lock);
+  }
+
+  return 0;
+}
+
+/**
+ * @details Get the simtemp state.
+ */
+simtemp_state_e nxp_simtemp_cdev_get_state(struct simtemp_device * dev)
+{
+  simtemp_state_e val = 0;
+  if (!dev) return 0;
+
+  { // Critical Section
+    mutex_lock(&dev->lock);
+    val = dev->state;
     mutex_unlock(&dev->lock);
   }
 
@@ -464,6 +515,7 @@ int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out)
   dev->sampling_ms = DEF_SAMPLE_RATE_MS;
   dev->threshold_mC = DEF_THRESHOLD_mC;
   dev->mode = eNORMAL;
+  dev->state= eST_NORMAL;
 
   ret = misc_register(&dev->miscdev);
   if (ret)
@@ -500,6 +552,18 @@ int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out)
     return ret;
   }
 
+
+  ret = device_create_file(dev->miscdev.this_device, &dev_attr_state);
+  if (ret)
+  {
+    device_remove_file(dev->miscdev.this_device, &dev_attr_sampling_ms);
+    device_remove_file(dev->miscdev.this_device, &dev_attr_threshold_mC);
+    device_remove_file(dev->miscdev.this_device, &dev_attr_mode);
+    misc_deregister(&dev->miscdev);
+    kfree(dev);
+    return ret;
+  }
+
   /* Initial Value - Place Holder*/
   ret = nxp_simtemp_cdev_push_sample(dev, "2025-09-22T20:15:04.123Z temp=0 alert=0\n");
   if (ret)
@@ -522,6 +586,8 @@ int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out)
           DRV_NAME, DRV_NAME, dev->threshold_mC);
   pr_info("[%s] sysfs: /sys/class/misc/%s/mode (default=%u)\n",
           DRV_NAME, DRV_NAME, dev->mode);
+  pr_info("[%s] sysfs: /sys/class/misc/%s/state (default=%u)\n",
+        DRV_NAME, DRV_NAME, dev->state);
   return 0;
 }
 
@@ -535,7 +601,8 @@ void nxp_simtemp_cdev_destroy(struct simtemp_device *dev)
   device_remove_file(dev->miscdev.this_device, &dev_attr_sampling_ms);
   device_remove_file(dev->miscdev.this_device, &dev_attr_threshold_mC);
   device_remove_file(dev->miscdev.this_device, &dev_attr_mode);
-  
+  device_remove_file(dev->miscdev.this_device, &dev_attr_state);
+
   misc_deregister(&dev->miscdev);
   kfree(dev->msg);
   kfree(dev);

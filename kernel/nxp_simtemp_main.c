@@ -55,26 +55,18 @@ static void nxp_simtemp_workfn(struct work_struct * work)
 {
   char newmsg[50];
 
-  simtemp_modes_e temp_mode = nxp_simtemp_chardev_get_mode(g_simtemp_dev);
+  simtemp_modes_e temp_mode = nxp_simtemp_cdev_get_mode(g_simtemp_dev);
   long temp_mC = get_temperature_mC(temp_mode);
 
   char iso_time[32];
   ts_iso8601_now(iso_time,sizeof(iso_time));
 
   unsigned int th_mc = nxp_simtemp_cdev_get_threshold_mC(g_simtemp_dev);
+  simtemp_state_e simtemp_state = (temp_mC > th_mc) ? (eST_THRESH) : (eST_NORMAL);
+  nxp_simtemp_cdev_set_state(g_simtemp_dev, simtemp_state);
 
-  {// Place Holder For alarm implementation
-    if(temp_mC > th_mc)
-    {
-      snprintf(newmsg, sizeof(newmsg), "%s temp=%ldmC alert=0\n",
-        iso_time, temp_mC);
-    }
-    else
-    {
-      snprintf(newmsg, sizeof(newmsg), "%s temp=%ldmC alert=1\n",
-        iso_time, temp_mC);
-    }
-  }
+  snprintf(newmsg, sizeof(newmsg), "%s temp=%ldmC alert=%d\n",
+    iso_time, temp_mC, simtemp_state);
 
   if(0 < nxp_simtemp_cdev_push_sample(g_simtemp_dev, newmsg))
   {
@@ -83,7 +75,7 @@ static void nxp_simtemp_workfn(struct work_struct * work)
   pr_info("[%s]: Temp: Updated\n",DRV_NAME);
 
   // Reschedule The Work Function.
-  unsigned int curr_sampling_ms = nxp_simtemp_chardev_get_sampling_ms(g_simtemp_dev);
+  unsigned int curr_sampling_ms = nxp_simtemp_cdev_get_sampling_ms(g_simtemp_dev);
   queue_delayed_work(nxp_simtemp_wq, &nxp_simtemp_work,
                       msecs_to_jiffies(max(1u, curr_sampling_ms)));
 }

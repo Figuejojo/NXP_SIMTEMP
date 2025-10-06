@@ -27,7 +27,7 @@
  ***********************************************/
 /* --- Common Driver Definitions --- */
 #define DRV_NAME "simtmep"
-#define DRV_VERSION "0.1.6"
+#define DRV_VERSION "0.1.7"
 
 /* --- Sample Time Driver Definitions --- */
 #define DEF_SAMPLE_RATE_MS (1000)
@@ -35,7 +35,7 @@
 #define MIN_SAMPLE_RATE_MS (1)
 
 /* --- Threshold Parameter Definitions --- */
-#define DEF_THRESHOLD_mC   (20000)
+#define DEF_THRESHOLD_mC   (35000)
 
 /***********************************************
  *  ENUMS and Sructs
@@ -47,5 +47,13 @@ typedef enum
   eRAMP   = 2,
   eEND
 }simtemp_modes_e;
+
+typedef enum
+{
+  eST_ERROR  = -1,
+  eST_NORMAL = 0,
+  eST_THRESH = 1,
+  eST_END
+}simtemp_state_e;
 
 #endif //_NXP_SIMTEMP_H_
