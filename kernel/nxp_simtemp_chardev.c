@@ -204,7 +204,7 @@ static ssize_t mode_show(struct device *d,
 {
   //Mode Change this
   struct simtemp_device *dev = g_sdev;
-  unsigned int mode = nxp_simtemp_chardev_get_mode(dev);
+  unsigned int mode = nxp_simtemp_cdev_get_mode(dev);
   return scnprintf(buf, PAGE_SIZE, "%s\n", mode_names[mode]);
 }
 
@@ -219,7 +219,7 @@ static ssize_t mode_store(struct device *d,
   int ret = kstrtouint(buf, 0, &mode);
   if (ret) return ret;
 
-  ret = nxp_simtemp_chardev_set_mode(dev, (simtemp_modes_e)mode);
+  ret = nxp_simtemp_cdev_set_mode(dev, (simtemp_modes_e)mode);
   if (ret) return ret;
 
   return count;
@@ -264,7 +264,7 @@ static ssize_t sampling_ms_show(struct device *d,
                                 struct device_attribute *attr, char *buf)
 {
   struct simtemp_device *dev = g_sdev;
-  unsigned int time_ms = nxp_simtemp_chardev_get_sampling_ms(dev);
+  unsigned int time_ms = nxp_simtemp_cdev_get_sampling_ms(dev);
   return scnprintf(buf, PAGE_SIZE, "%u\n", time_ms);
 }
 
@@ -278,7 +278,7 @@ static ssize_t sampling_ms_store(struct device *d,
   int ret = kstrtouint(buf, 0, &ms);
   if (ret) return ret;
 
-  ret = nxp_simtemp_chardev_set_sampling_ms(dev, ms);
+  ret = nxp_simtemp_cdev_set_sampling_ms(dev, ms);
   if (ret) return ret;
 
   return count;
@@ -384,7 +384,7 @@ int nxp_simtemp_cdev_get_threshold_mC(struct simtemp_device *dev)
 /**
  * @details Set sampling time in ms.
  */
-int nxp_simtemp_chardev_set_sampling_ms(struct simtemp_device *dev, unsigned int time_ms)
+int nxp_simtemp_cdev_set_sampling_ms(struct simtemp_device *dev, unsigned int time_ms)
 {
 
   if (!dev) return -ENODEV;
@@ -403,7 +403,7 @@ int nxp_simtemp_chardev_set_sampling_ms(struct simtemp_device *dev, unsigned int
 /**
  * @details Get sampling time in ms.
  */
-unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev)
+unsigned int nxp_simtemp_cdev_get_sampling_ms(struct simtemp_device *dev)
 {
   unsigned int val = 0;
   if (!dev) return 0;
@@ -420,7 +420,7 @@ unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev)
 /**
  * @details Set temperature mode.
  */
-int nxp_simtemp_chardev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode)
+int nxp_simtemp_cdev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode)
 {
 
   if (!dev) return -ENODEV;
@@ -439,7 +439,7 @@ int nxp_simtemp_chardev_set_mode(struct simtemp_device *dev, simtemp_modes_e mod
 /**
  * @details Get temperature mode.
  */
-unsigned int nxp_simtemp_chardev_get_mode(struct simtemp_device *dev)
+unsigned int nxp_simtemp_cdev_get_mode(struct simtemp_device *dev)
 {
   unsigned int val = 0;
   if (!dev) return 0;

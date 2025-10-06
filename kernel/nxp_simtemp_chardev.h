@@ -85,7 +85,7 @@ int nxp_simtemp_cdev_get_threshold_mC(struct simtemp_device *dev);
  *
  * @return < 0 for any error code.
  */
-int nxp_simtemp_chardev_set_sampling_ms(struct simtemp_device *dev, unsigned int time_ms);
+int nxp_simtemp_cdev_set_sampling_ms(struct simtemp_device *dev, unsigned int time_ms);
 
 /**
  * @brief Get current sample time.
@@ -94,7 +94,7 @@ int nxp_simtemp_chardev_set_sampling_ms(struct simtemp_device *dev, unsigned int
  *
  * @return sample in ms
  */
-unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev);
+unsigned int nxp_simtemp_cdev_get_sampling_ms(struct simtemp_device *dev);
 
 /**
  * @brief Set new mode.
@@ -104,7 +104,7 @@ unsigned int nxp_simtemp_chardev_get_sampling_ms(struct simtemp_device *dev);
  *
  * @return < 0 for any error code.
  */
-int nxp_simtemp_chardev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode);
+int nxp_simtemp_cdev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode);
 
 /**
  * @brief Get current mode.
@@ -113,7 +113,7 @@ int nxp_simtemp_chardev_set_mode(struct simtemp_device *dev, simtemp_modes_e mod
  *
  * @return current mode.
  */
-unsigned int nxp_simtemp_chardev_get_mode(struct simtemp_device *dev);
+unsigned int nxp_simtemp_cdev_get_mode(struct simtemp_device *dev);
 
 /**
  * @brief Set current status.

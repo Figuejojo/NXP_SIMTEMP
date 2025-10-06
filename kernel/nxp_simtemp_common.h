@@ -35,7 +35,7 @@
 #define MIN_SAMPLE_RATE_MS (1)
 
 /* --- Threshold Parameter Definitions --- */
-#define DEF_THRESHOLD_mC   (20000)
+#define DEF_THRESHOLD_mC   (35000)
 
 /***********************************************
  *  ENUMS and Sructs
