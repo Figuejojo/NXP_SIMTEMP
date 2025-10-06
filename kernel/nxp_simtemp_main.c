@@ -38,7 +38,7 @@ static void __exit nxp_simtemp_exit(void) ;
 /***********************************************
  *  Static Variables
  ***********************************************/
-static struct simtemp_device *g_simtemp_dev;
+static simtemp_dev_t *g_simtemp_dev;
 static struct workqueue_struct *nxp_simtemp_wq;
 static struct delayed_work      nxp_simtemp_work;
 

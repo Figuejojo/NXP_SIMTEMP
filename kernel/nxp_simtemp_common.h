@@ -19,6 +19,7 @@
 #include <linux/kernel.h>
 #include <linux/workqueue.h>
 #include <linux/jiffies.h>
+#include <linux/types.h>
 // cppcheck-suppress-end missingIncludeSystem
 
 
