@@ -45,7 +45,6 @@ static ssize_t simtemp_read(struct file *filp, char __user *ubuf,
                             size_t count, loff_t *ppos);
 static int simtemp_release(struct inode *inode, struct file *filp);
 static __poll_t simtemp_poll(struct file *filp, poll_table *wait);
-static int nxp_simtemp_cdev_set_message(simtemp_dev_t *dev, const char *msg);
 
 /***********************************************
  *  Static Functions
@@ -276,50 +275,39 @@ static ssize_t state_show(struct device *d,
 
 static DEVICE_ATTR_RO(state);
 
-/* ---------- Message Functions ---------- */
-/**
- * @details Set messages to be picked by /dev/ read access.
- */
-static int nxp_simtemp_cdev_set_message(simtemp_dev_t *dev, const char *msg)
-{
-  char *newbuf;
-  size_t len;
-
-  if (!dev || !msg) return -EINVAL;
-
-  len = strlen(msg);
-  newbuf = kmemdup_nul(msg, len, GFP_KERNEL);
-  if (!newbuf)  return -ENOMEM;
-
-  { // Critical Section
-    mutex_lock(&dev->lock);
-    kfree(dev->msg);
-    dev->msg = newbuf;
-    dev->msg_len = len;
-    mutex_unlock(&dev->lock);
-  }
-  return 0;
-}
 /***********************************************
  *  Public Functions
  ***********************************************/
 /**
  * @details Push Fresh sample and wake-up poll.
  */
-int nxp_simtemp_cdev_push_sample(simtemp_dev_t *dev, const char *msg)
+int nxp_simtemp_cdev_push_sample_bin(struct simtemp_device *dev,
+                                    const struct simtemp_sample *sbin)
 {
-  int ret;
-  if(!dev) return -ENODEV;
+  if (!dev || !sbin) return -EINVAL;
 
-  ret = nxp_simtemp_cdev_set_message(dev, msg);
-  if(ret) return ret;
-
-  {// Critical Section
+  {// Start of Critical Section
     mutex_lock(&dev->lock);
+    if (!dev->msg || dev->msg_len != sizeof(*sbin))
+    {
+      kfree(dev->msg);
+      dev->msg = kmemdup(sbin, sizeof(*sbin), GFP_KERNEL);
+      if (!dev->msg)
+      {
+        mutex_unlock(&dev->lock);
+        return -ENOMEM;
+      }
+      dev->msg_len = sizeof(*sbin);
+    }
+    else
+    {
+      memcpy(dev->msg, sbin, sizeof(*sbin));
+    }
     dev->seq++;
+
     mutex_unlock(&dev->lock);
-  }
-  // Notify Poll
+  }// End of Critical Section
+
   wake_up_interruptible(&dev->wq);
   return 0;
 }
@@ -471,6 +459,7 @@ int nxp_simtemp_cdev_create(struct device *parent, simtemp_dev_t **out)
 {
   int ret;
   simtemp_dev_t *dev;
+  bin_sample_t new_sbin;
 
   if (!out) return -EINVAL;
 
@@ -540,8 +529,12 @@ int nxp_simtemp_cdev_create(struct device *parent, simtemp_dev_t **out)
     return ret;
   }
 
+  new_sbin.temp_mC = 0;
+  new_sbin.timestamp_ns = 0;
+  new_sbin.flags = dev->state;
+
   /* Initial Value - Place Holder*/
-  ret = nxp_simtemp_cdev_push_sample(dev, "2025-09-22T20:15:04.123Z temp=0 alert=0\n");
+  ret = nxp_simtemp_cdev_push_sample_bin(dev,&new_sbin);
   if (ret)
   {
     device_remove_file(dev->miscdev.this_device, &dev_attr_sampling_ms);

@@ -24,6 +24,7 @@
 #include <linux/wait.h>
 #include <linux/device.h>
 #include <linux/types.h>
+#include <linux/ktime.h>
 // cppcheck-suppress-end missingIncludeSystem
 
 /***********************************************
@@ -53,6 +54,12 @@ typedef struct simtemp_device
 
 }simtemp_dev_t;
 
+typedef struct simtemp_sample {
+    __u64 timestamp_ns;
+    __s32 temp_mC;
+    __u32 flags;
+} __attribute__((packed)) bin_sample_t;
+
 /***********************************************
  *  Function Declarations
  ***********************************************/
@@ -74,12 +81,13 @@ int nxp_simtemp_cdev_create(struct device *parent, simtemp_dev_t **out);
 void nxp_simtemp_cdev_destroy(simtemp_dev_t *dev);
 
 /**
- * @brief Push new sampel and wake up poll.
+ * @brief Push new cinary sample and wake up poll.
  *
  * @param dev Ptr to the device object.
- * @param msg Message ready to be read.
+ * @param sbin Ptr to the new binary record structure.
  */
-int nxp_simtemp_cdev_push_sample(simtemp_dev_t *dev, const char *msg);
+int nxp_simtemp_cdev_push_sample_bin(struct simtemp_device *dev,
+                                    const struct simtemp_sample *sbin);
 
 /**
  * @brief Set new threshold in mili-Celsius.
