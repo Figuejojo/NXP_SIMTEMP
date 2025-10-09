@@ -23,12 +23,42 @@
 #include <linux/mutex.h>
 #include <linux/wait.h>
 #include <linux/device.h>
+#include <linux/types.h>
+#include <linux/ktime.h>
 // cppcheck-suppress-end missingIncludeSystem
 
 /***********************************************
  *  ENUMS and Sructs
  ***********************************************/
-struct simtemp_device;
+typedef struct simtemp_device
+{
+  struct miscdevice miscdev;
+  struct device    *parent;
+
+  /* Msg buffer returned on read (user-visible). */
+  char   *msg;
+  size_t  msg_len;
+
+  /* Queue for reader waiting for data (poll)*/
+  wait_queue_head_t wq;
+
+  /* Synchronization */
+  struct mutex lock;  // Protects msg during read/push
+  u32 seq;            // Incremental on every push
+
+  /* -- Sys Parameters -- */
+  unsigned int sampling_ms;   /* Default 1000     */
+  unsigned int threshold_mC;  /* Default 40000    */
+  simtemp_modes_e mode;       /* Default 0-Normal */
+  simtemp_state_e state ;     /* Default Okay     */
+
+}simtemp_dev_t;
+
+typedef struct simtemp_sample {
+    __u64 timestamp_ns;
+    __s32 temp_mC;
+    __u32 flags;
+} __attribute__((packed)) bin_sample_t;
 
 /***********************************************
  *  Function Declarations
@@ -41,22 +71,23 @@ struct simtemp_device;
  *
  * @return Errors (EINVAL | ENOMEM | ...)
  */
-int nxp_simtemp_cdev_create(struct device *parent, struct simtemp_device **out);
+int nxp_simtemp_cdev_create(struct device *parent, simtemp_dev_t **out);
 
 /**
  * @brief Destroy /dev/simtemp and free resources.
  *
  * @param dev device object pointer.
  */
-void nxp_simtemp_cdev_destroy(struct simtemp_device *dev);
+void nxp_simtemp_cdev_destroy(simtemp_dev_t *dev);
 
 /**
- * @brief Push new sampel and wake up poll.
+ * @brief Push new cinary sample and wake up poll.
  *
  * @param dev Ptr to the device object.
- * @param msg Message ready to be read.
+ * @param sbin Ptr to the new binary record structure.
  */
-int nxp_simtemp_cdev_push_sample(struct simtemp_device *dev, const char *msg);
+int nxp_simtemp_cdev_push_sample_bin(struct simtemp_device *dev,
+                                    const struct simtemp_sample *sbin);
 
 /**
  * @brief Set new threshold in mili-Celsius.
@@ -66,7 +97,7 @@ int nxp_simtemp_cdev_push_sample(struct simtemp_device *dev, const char *msg);
  *
  * @return < 0 for any error code.
  */
-int nxp_simtemp_cdev_set_threshold_mC(struct simtemp_device *dev, unsigned int th_mC);
+int nxp_simtemp_cdev_set_threshold_mC(simtemp_dev_t *dev, unsigned int th_mC);
 
 /**
  * @brief Set new threshold in mili-Celsius.
@@ -75,7 +106,7 @@ int nxp_simtemp_cdev_set_threshold_mC(struct simtemp_device *dev, unsigned int t
  *
  * @return sample in ms
  */
-int nxp_simtemp_cdev_get_threshold_mC(struct simtemp_device *dev);
+int nxp_simtemp_cdev_get_threshold_mC(simtemp_dev_t *dev);
 
 /**
  * @brief Set new sample time.
@@ -85,7 +116,7 @@ int nxp_simtemp_cdev_get_threshold_mC(struct simtemp_device *dev);
  *
  * @return < 0 for any error code.
  */
-int nxp_simtemp_cdev_set_sampling_ms(struct simtemp_device *dev, unsigned int time_ms);
+int nxp_simtemp_cdev_set_sampling_ms(simtemp_dev_t *dev, unsigned int time_ms);
 
 /**
  * @brief Get current sample time.
@@ -94,7 +125,7 @@ int nxp_simtemp_cdev_set_sampling_ms(struct simtemp_device *dev, unsigned int ti
  *
  * @return sample in ms
  */
-unsigned int nxp_simtemp_cdev_get_sampling_ms(struct simtemp_device *dev);
+unsigned int nxp_simtemp_cdev_get_sampling_ms(simtemp_dev_t *dev);
 
 /**
  * @brief Set new mode.
@@ -104,7 +135,7 @@ unsigned int nxp_simtemp_cdev_get_sampling_ms(struct simtemp_device *dev);
  *
  * @return < 0 for any error code.
  */
-int nxp_simtemp_cdev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode);
+int nxp_simtemp_cdev_set_mode(simtemp_dev_t *dev, simtemp_modes_e mode);
 
 /**
  * @brief Get current mode.
@@ -113,7 +144,7 @@ int nxp_simtemp_cdev_set_mode(struct simtemp_device *dev, simtemp_modes_e mode);
  *
  * @return current mode.
  */
-unsigned int nxp_simtemp_cdev_get_mode(struct simtemp_device *dev);
+unsigned int nxp_simtemp_cdev_get_mode(simtemp_dev_t *dev);
 
 /**
  * @brief Set current status.
@@ -121,7 +152,7 @@ unsigned int nxp_simtemp_cdev_get_mode(struct simtemp_device *dev);
  * @param dev Ptr to the device object.
  *
  */
-int nxp_simtemp_cdev_set_state(struct simtemp_device*dev, simtemp_state_e state);
+int nxp_simtemp_cdev_set_state(simtemp_dev_t*dev, simtemp_state_e state);
 
 
 /**
@@ -131,6 +162,6 @@ int nxp_simtemp_cdev_set_state(struct simtemp_device*dev, simtemp_state_e state)
  *
  * @return current status.
  */
-simtemp_state_e nxp_simtemp_cdev_get_state(struct simtemp_device*dev);
+simtemp_state_e nxp_simtemp_cdev_get_state(simtemp_dev_t*dev);
 
 #endif //_NXP_SIMTEMP_HELPERS_CHARDEV_h_

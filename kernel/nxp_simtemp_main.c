@@ -38,7 +38,7 @@ static void __exit nxp_simtemp_exit(void) ;
 /***********************************************
  *  Static Variables
  ***********************************************/
-static struct simtemp_device *g_simtemp_dev;
+static simtemp_dev_t *g_simtemp_dev;
 static struct workqueue_struct *nxp_simtemp_wq;
 static struct delayed_work      nxp_simtemp_work;
 
@@ -53,10 +53,11 @@ static struct delayed_work      nxp_simtemp_work;
  */
 static void nxp_simtemp_workfn(struct work_struct * work)
 {
-  char newmsg[50];
+  bin_sample_t new_sBin;
 
   simtemp_modes_e temp_mode = nxp_simtemp_cdev_get_mode(g_simtemp_dev);
   long temp_mC = get_temperature_mC(temp_mode);
+
 
   char iso_time[32];
   ts_iso8601_now(iso_time,sizeof(iso_time));
@@ -65,14 +66,11 @@ static void nxp_simtemp_workfn(struct work_struct * work)
   simtemp_state_e simtemp_state = (temp_mC > th_mc) ? (eST_THRESH) : (eST_NORMAL);
   nxp_simtemp_cdev_set_state(g_simtemp_dev, simtemp_state);
 
-  snprintf(newmsg, sizeof(newmsg), "%s temp=%ldmC alert=%d\n",
-    iso_time, temp_mC, simtemp_state);
+  new_sBin.timestamp_ns = ktime_get_real_ns();
+  new_sBin.temp_mC =  temp_mC;
+  new_sBin.flags   =  simtemp_state;
 
-  if(0 < nxp_simtemp_cdev_push_sample(g_simtemp_dev, newmsg))
-  {
-    pr_info("[%s]: Temp: Failed to Update\n",DRV_NAME);
-  }
-  pr_info("[%s]: Temp: Updated\n",DRV_NAME);
+  nxp_simtemp_cdev_push_sample_bin(g_simtemp_dev, &new_sBin);
 
   // Reschedule The Work Function.
   unsigned int curr_sampling_ms = nxp_simtemp_cdev_get_sampling_ms(g_simtemp_dev);
