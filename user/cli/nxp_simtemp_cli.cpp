@@ -22,18 +22,6 @@ const std::string NXPSimtempCLI::kDefaultDev = "/dev/simtemp";
  *  Static Variables
  ***********************************************/
 
-NXPSimtempCLI::NXPSimtempCLI() 
-{
-    // Initialize the attribute map (same as original)
-    attrMap = {
-        {"SAMP", "sampling_ms"},
-        {"THRS", "threshold_mC"},
-        {"MODE", "mode"},
-        {"STAT", "state"}  // RO
-    };
-}
-
-
 /***********************************************
  *  Public Methods
  ***********************************************/

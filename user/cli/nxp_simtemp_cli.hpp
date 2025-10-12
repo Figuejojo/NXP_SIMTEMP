@@ -9,6 +9,7 @@
 #ifndef _NXP_SIMTEMP_CLI_HPP_
 #define _NXP_SIMTEMP_CLI_HPP_
 
+// cppcheck-suppress-begin missingIncludeSystem
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/stat.h>
@@ -23,6 +24,7 @@
 #include <string>
 #include <map>
 #include <vector>
+// cppcheck-suppress-end missingIncludeSystem
 
 struct SimtempSample 
 {
@@ -35,7 +37,7 @@ class NXPSimtempCLI
 {
   public:
 
-    NXPSimtempCLI();
+    NXPSimtempCLI()  = default;
     ~NXPSimtempCLI() = default;
 
     // Main command execution
@@ -54,7 +56,12 @@ class NXPSimtempCLI
     void printHelp() const;
 
     //Attribute map
-    std::map<std::string, std::string> attrMap;
+    std::map<std::string, std::string> attrMap{
+      {"SAMP", "sampling_ms"},
+      {"THRS", "threshold_mC"},
+      {"MODE",  "mode"},
+      {"STAT",  "state"}
+    };
 
     // File I/O methods
     std::string readFile(const std::string& path) const;

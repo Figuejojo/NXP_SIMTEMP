@@ -7,7 +7,6 @@
  */
 
 #include "nxp_simtemp_cli.hpp"
-#include <iostream>
 
 int main(int argc, char* argv[]) {
     NXPSimtempCLI cli;
