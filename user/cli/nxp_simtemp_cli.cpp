@@ -10,221 +10,285 @@
  /***********************************************
  *  Includes
  ***********************************************/
-#include <fcntl.h>
-#include <poll.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include "nxp_simtemp_cli.hpp"
 
-#include <cerrno>
-#include <cstdint>
-#include <cstring>
-#include <iostream>   
-#include <sstream>
-#include <string>
-#include <map>
-#include <vector>
-
-static const std::string kDefaultBase = "/sys/class/misc/simtemp";
-static const std::string kDefaultDev  = "/dev/simtemp";
+/***********************************************
+ *  Const Variables
+ ***********************************************/
+const std::string NXPSimtempCLI::kDefaultBase = "/sys/class/misc/simtemp";
+const std::string NXPSimtempCLI::kDefaultDev = "/dev/simtemp";
 
 /***********************************************
  *  Static Variables
  ***********************************************/
-struct __attribute__((packed)) SimtempSample 
-{
-  uint64_t timestamp_ns;
-  int32_t  temp_mC;
-  uint32_t flags;
-};
 
-static std::map<std::string,std::string> attrMap = {
-  {"SAMP", "sampling_ms"},
-  {"THRS", "threshold_mC"},
-  {"MODE", "mode"},
-  {"STAT", "state"}// RO
-};
+NXPSimtempCLI::NXPSimtempCLI() 
+{
+    // Initialize the attribute map (same as original)
+    attrMap = {
+        {"SAMP", "sampling_ms"},
+        {"THRS", "threshold_mC"},
+        {"MODE", "mode"},
+        {"STAT", "state"}  // RO
+    };
+}
+
 
 /***********************************************
- *  Static Function Prototypes
+ *  Public Methods
  ***********************************************/
-// Helper Functions
-static void killProcess(std::string msg);
-static void printHelp();
+int NXPSimtempCLI::execute(int argc, char* argv[]) 
+{
+  std::vector<std::string> args(argv, argv + argc);
 
-// Set Attribute Functions
-static void writeFile(const std::string& path, const std::string& val);
-int setAtt(std::string att, std::string val)
+  if (argc < 2) 
+  {
+    std::cerr << "Error: No command provided." << std::endl;
+    printHelp();
+    return 1;
+  }
 
-// Get Attribute Functions
-static std::string readFile(const std::string& path) 
-int getAtt(std::string att)
+  const std::string& command = args[1];
+
+  if (command == "help" || command == "-h" || command == "--help") 
+  {
+    printHelp();
+    return 0;
+  }
+  else if (command == "set" || command == "-s") 
+  {
+    return executeSetCommand(args);
+  }
+  else if (command == "get" || command == "-g") 
+  {
+    return executeGetCommand(args);
+  }
+  else if (command == "poll" || command == "-p") 
+  {
+    return executePollCommand(args);
+  }
+  else 
+  {
+    std::cerr << "Error: Unknown command '" << command << "'." << std::endl;
+    printHelp();
+    return 1;
+  }
+}
+
+int NXPSimtempCLI::setAttribute(const std::string& att, const std::string& value)
+{
+  if (!isValidAttribute(att)) 
+  {
+    std::cerr << "Error: Invalid attribute '" << att << "'." << std::endl;
+    return -1;
+  }
+  
+  if (isAttributeReadOnly(att)) 
+  {
+    std::cerr << "Error: Attribute '" << att << "' is read-only." << std::endl;
+    return -1;
+  }
+
+  std::string path = getAttributePath(att);
+  writeFile(path, value + "\n");
+  std::cout << att << " set to: " << value << std::endl;
+  return 0;
+}
+
+int NXPSimtempCLI::getAttribute(const std::string& att) 
+{
+  if (!isValidAttribute(att)) 
+  {
+    std::cerr << "Error: Invalid attribute '" << att << "'." << std::endl;
+    return -1;
+  }
+
+  std::string path = getAttributePath(att);
+  std::string value = readFile(path);
+  std::cout << att << ": " << value << std::endl;
+  return 0;
+}
+
+int NXPSimtempCLI::pollSamples(int numSamples)
+{
+  // Implementation for polling samples
+  std::cout << "Polling for " << numSamples << " samples..." << std::endl;
+  // TODO: Implement actual polling logic
+  return 0;
+}
+
 
 /***********************************************
- *  Static Functions
+ *  Private Methods
  ***********************************************/
-
-static void printHelp() 
+void NXPSimtempCLI::printHelp() const 
 {
-  std::cout << "Usage: nxp_simtempcli [COMMAND] [OPTIONS] [ARGUMENTS]" << std::endl;
-  std::cout << "CLI program for interacting with the nxp_simtemp driver.\n" << std::endl;
+  std::cout << "Usage: nxp_simtempcli [COMMAND] [OPTIONS] [ARGUMENTS]\n";
+  std::cout << "CLI program for interacting with the nxp_simtemp driver.\n\n";
   
   std::cout << "COMMANDS:\n";
-  std::cout << "  poll, -p <samples>      Poll for specified number of samples" << std::endl;
-  std::cout << "  get,  -g <attribute>    Read current value of attribute"      << std::endl;
-  std::cout << "  set,  -s <attribute> <value>  Set attribute to new value\n"   << std::endl;
-
-  std::cout << "OPTIONS:" << std::endl;
-  std::cout << "  --help, -h              Display this help message\n" std::endl;
-
-  std::cout << "ATTRIBUTES:" << std::endl;
-  std::cout << "  SAMP  (RW)  Sample Time [ms]" << std::endl;
-  std::cout << "  THRS  (RW)  Threshold [mC]"   << std::endl;
-  std::cout << "  MODE  (RW)  Mode: 0=Normal, 1=Noisy, 2=RAMP" << std::endl;
-  std::cout << "  STAT  (RO)  State: 0=Normal, 1=Threshold Crossed" << std::endl;
-
+  std::cout << "  poll, -p <samples>      Poll for specified number of samples\n";
+  std::cout << "  get,  -g <attribute>    Read current value of attribute\n";
+  std::cout << "  set,  -s <attribute> <value>  Set attribute to new value\n\n";
+  
+  std::cout << "OPTIONS:\n";
+  std::cout << "  --help, -h              Display this help message\n\n";
+  
+  std::cout << "ATTRIBUTES:\n";
+  std::cout << "  SAMP  (RW)  Sample Time [ms]\n";
+  std::cout << "  THRS  (RW)  Threshold [mC]\n";
+  std::cout << "  MODE  (RW)  Mode: 0=Normal, 1=Noisy, 2=RAMP\n";
+  std::cout << "  STAT  (RO)  State: 0=Normal, 1=Threshold Crossed\n";
 }
 
-static void killProcess(std::string msg)
+void NXPSimtempCLI::handleError(const std::string& msg, bool useErrno) const 
 {
   std::cerr << "Error: " << msg;
-  if (errno) std::cerr << " (" << strerror(errno) << ")";
-  std::cerr << "\n";
-  _exit(2);
+  if (useErrno && errno) 
+  {
+    std::cerr << " (" << strerror(errno) << ")";
+  }
+  std::cerr << std::endl;
+  exit(2);
 }
 
-static void writeFile(const std::string& path, const std::string& val) 
+bool NXPSimtempCLI::isValidAttribute(const std::string& att) const 
+{
+  return attrMap.find(att) != attrMap.end();
+}
+
+std::string NXPSimtempCLI::getAttributePath(const std::string& att) const 
+{
+  std::ostringstream oss;
+  oss << kDefaultBase << "/" << attrMap.at(att);
+  return oss.str();
+}
+
+bool NXPSimtempCLI::isAttributeReadOnly(const std::string& att) const 
+{
+  return (att == "STAT");
+}
+
+std::string NXPSimtempCLI::readFile(const std::string& path) const 
+{
+  int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
+  if (fd < 0)  handleError("Open (read): " + path);
+
+  std::string out;
+  char buf[256];
+    
+  for (;;) 
+  {
+    ssize_t r = ::read(fd, buf, sizeof(buf));
+    if (r < 0) 
+    {
+      int e = errno;
+      ::close(fd);
+      errno = e;
+      handleError("read: " + path);
+    }
+    if (r == 0) break;
+    out.append(buf, buf + r);
+  }
+
+  ::close(fd);
+  
+  // Trim trailing newline for cleaner output
+  while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) 
+  {
+    out.pop_back();
+  }
+  
+  return out;
+}
+
+void NXPSimtempCLI::writeFile(const std::string& path, const std::string& value) const 
 {
   int fd = ::open(path.c_str(), O_WRONLY | O_CLOEXEC);
-  if (fd < 0) killProcess("open (write): " + path);
+  if (fd < 0) 
+  {
+    handleError("open (write): " + path);
+  }
 
-  const char* ptr_val = val.c_str();
-  size_t bytesleft = val.size();
+  const char* ptr_val = value.c_str();
+  size_t bytesleft = value.size();
 
-  while (bytesleft)
+  while (bytesleft) 
   {
     ssize_t bytesWritten = ::write(fd, ptr_val, bytesleft);
-    if (bytesWritten < 0) 
+    if (bytesWritten < 0)
     {
-      int e = errno; 
-      ::close(fd); 
+      int e = errno;
+      ::close(fd);
       errno = e;
-      killProcess("write: " + path);
+      handleError("write: " + path);
     }
-    bytesleft -= (size_t)bytesWritten; 
+    bytesleft -= (size_t)bytesWritten;
     ptr_val += bytesWritten;
   }
   ::close(fd);
 }
 
-int setAtt(std::string att, std::string val)
+int NXPSimtempCLI::executeSetCommand(const std::vector<std::string>& args) 
 {
-  if(attrMap.find(att) == attrMap.end()) return -1;
-  if(att == "STAT") return -1;
-
-  std::ostringstream oss;
-  oss << kDefaultBase << "/" << attrMap[att];
-  std::string attDir = oss.str();
-
-  writeFile(attDir, val+"\n");
-  std::cout<< attDir << " (set): " << val << std::endl;
-
-  return 0;
-}
-
-static std::string readFile(const std::string& path) 
-{
-  int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
-  if (fd < 0) killProcess("Open (read): "+path);
-
-  std::string out;
-  char buf[256];
-  for (;;)
+  if (args.size() < 4) 
   {
-    ssize_t r = ::read(fd, buf, sizeof(buf));
-    if (r < 0) 
-    {
-      int e = errno; 
-      ::close(fd); 
-      errno = e;
-      killProcess("read: " + path);
-    }
-    if (r == 0) break;
-    out.append(buf, buf + r);
-  }
-  ::close(fd);
-  // Trim trailing newline for nicer prints
-  while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) out.pop_back();
-  return out;
-}
-
-int getAtt(std::string att)
-{
-  if(attrMap.find(att) == attrMap.end()) return -1;
-
-  std::ostringstream oss;
-  oss << kDefaultBase << "/" << attrMap[att];
-  std::string attDir = oss.str();
-
-  std::cout << attrMap[att] << ": " << readFile(oss.str()) << std::endl;
-  return 0;
-}
-
-int main(int argc, char* argv[]) 
-{
-  std::vector<std::string> args(argv, argv + argc);
-
-  if (argc > 1 && (args[1] == "help" || args[1] == "-h")) {
-      printHelp();
-      return 0; // Exit successfully after printing help
+    std::cerr << "Error: Missing arguments for set command." << std::endl;
+    std::cerr << "Usage: " << args[0] << " set <attribute> <value>" << std::endl;
+    return 1;
   }
 
-  if (argc < 2) 
+  const std::string& att = args[2];
+  const std::string& value = args[3];
+
+  if (!isValidAttribute(att))
   {
-      std::cerr << "Error: No command provided." << std::endl;
-      return 1; // Return a non-zero exit code for error
+    std::cerr << "Error: Invalid attribute '" << att << "'." << std::endl;
+    std::cerr << "Valid attributes: SAMP, THRS, MODE, STAT" << std::endl;
+    return 1;
   }
-  else
-  {
-    if (args[1] == "set" || args[1] == "-s") 
+
+  return setAttribute(att, value);
+}
+
+int NXPSimtempCLI::executeGetCommand(const std::vector<std::string>& args) 
+{
+    if (args.size() < 3) 
     {
-      if (argc < 4)
-      {
-        std::cerr << "Error: Missing argument for set." << std::endl;
-        std::cerr << "Usage: " << args[0] << "set <attribute> <number>" << std::endl;
-        return 1;
-      }
-      if(setAtt(args[2],args[3]))
-      {
-        std::cerr<< "Error: Wrong Attribute or ReadOnly Attribute, verify attribute using help option."<<std::endl;
-      }
-    }
-    else if (args[1] == "get" || args[1] == "-g") 
-    {
-      if (argc < 3)
-      {
-        std::cerr << "Error: Missing argument for get" << std::endl;
+        std::cerr << "Error: Missing argument for get command." << std::endl;
         std::cerr << "Usage: " << args[0] << " get <attribute>" << std::endl;
         return 1;
-      }
-      if(getAtt(args[2]))
-      {
-        std::cerr<< "Error: Wrong Attribute, verify attribute using help option."<<std::endl;
-      }
     }
-    else if (args[1] == "poll" || args[1] == "-p") 
+
+    const std::string& att = args[2];
+
+    if (!isValidAttribute(att)) 
     {
-      if (argc < 3)
-      {
-        std::cerr << "Error: Missing argument for poll" << std::endl;
-        std::cerr << "Usage: " << args[0] << " poll <#Samples>" << std::endl;
+        std::cerr << "Error: Invalid attribute '" << att << "'." << std::endl;
+        std::cerr << "Valid attributes: SAMP, THRS, MODE, STAT" << std::endl;
         return 1;
-      }
     }
-    else
-    {
-      std::cerr << "Error: Unknown command '" << args[1] << "'." << std::endl;
-      return 1;
-    }
+
+    return getAttribute(att);
+}
+
+int NXPSimtempCLI::executePollCommand(const std::vector<std::string>& args) 
+{
+  if (args.size() < 3) 
+  {
+    std::cerr << "Error: Missing argument for poll command." << std::endl;
+    std::cerr << "Usage: " << args[0] << " poll <samples>" << std::endl;
+    return 1;
+  }
+
+  try 
+  {
+    int numSamples = std::stoi(args[2]);
+    return pollSamples(numSamples);
+  } 
+  catch (const std::exception& e) 
+  {
+    std::cerr << "Error: Invalid number of samples: " << args[2] << std::endl;
+    return 1;
   }
 }
