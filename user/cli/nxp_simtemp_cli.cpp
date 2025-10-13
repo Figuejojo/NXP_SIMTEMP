@@ -99,9 +99,99 @@ int NXPSimtempCLI::getAttribute(const std::string& att)
 
 int NXPSimtempCLI::pollSamples(int numSamples)
 {
-  // Implementation for polling samples
-  std::cout << "Polling for " << numSamples << " samples..." << std::endl;
-  // TODO: Implement actual polling logic
+  if (numSamples <= 0)
+  {
+    std::cerr << "Error: Number of samples must be positive." << std::endl;
+    return -1;
+  }
+
+  int dev_fd = ::open(kDefaultDev.c_str(), O_RDONLY | O_CLOEXEC);
+  if (dev_fd < 0)
+  {
+    handleError("open device: " + kDefaultDev);
+    return -1;
+  }
+
+    std::cout << "Polling for " << numSamples << " samples from " << kDefaultDev << std::endl;
+    std::cout << "Timestamp(ns)\t\t\tTemperature(mC)\tFlags" << std::endl;
+    std::cout << "-------------\t\t\t---------------\t-----" << std::endl;
+
+  struct pollfd fds[1];
+  fds[0].fd = dev_fd;
+  fds[0].events = POLLIN;
+
+  int samples_read = 0;
+  int timeout_ms = 60000; // 60 seconds timeout
+
+  while(samples_read < numSamples)
+  {
+    int ret = poll(fds, 1, timeout_ms);
+    if (ret < 0)
+    {
+        int e = errno;
+        ::close(dev_fd);
+        errno = e;
+        handleError("poll failed");
+        return -1;
+    }
+
+    if (ret == 0)
+    {
+      std::cerr << "Error: Poll timeout after " << timeout_ms << "ms" << std::endl;
+      ::close(dev_fd);
+      return -1;
+    }
+
+    if (fds[0].revents & POLLIN)
+    {
+      SimtempSample sample;
+      ssize_t bytes_read = ::read(dev_fd, &sample, sizeof(sample));
+      if (bytes_read < 0)
+      {
+        int e = errno;
+        ::close(dev_fd);
+        errno = e;
+        handleError("read failed");
+        return -1;
+      }
+
+      if (bytes_read != sizeof(sample))
+      {
+        std::cerr << "Error: Incomplete sample read (" << bytes_read
+                  << " bytes instead of " << sizeof(sample) << ")" << std::endl;
+        ::close(dev_fd);
+        return -1;
+      }
+
+      // Convert to ISO Time
+      char iso8601[40];
+      time_t sec = (time_t)(sample.timestamp_ns / 1000000000ULL);
+      int msec   = (int)((sample.timestamp_ns % 1000000000ULL) / 1000000ULL);
+      struct tm tm_utc;
+      gmtime_r(&sec, &tm_utc);
+      char base[32];
+      strftime(base, sizeof(base), "%Y-%m-%dT%H:%M:%S", &tm_utc);
+      snprintf(iso8601, 40, "%s.%03dZ", base, msec);
+
+      // Convert Temperature adn display
+      double temp_c = sample.temp_mC / 1000.0;
+      int alert = (sample.flags & 0x1) ? 1 : 0;
+
+      std::cout << iso8601;
+      std::cout << "\ttemp=" << std::fixed << std::setprecision(1) << temp_c;
+      std::cout << "C\talert=" << alert << std::endl;
+
+      samples_read++;
+    }
+
+    if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))
+    {
+      std::cerr << "Error: Device error or disconnected" << std::endl;
+      ::close(dev_fd);
+      return -1;
+    }
+  }
+  ::close(dev_fd);
   return 0;
 }
 
