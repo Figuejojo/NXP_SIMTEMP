@@ -13,26 +13,26 @@ Goal: Ensure device nodes and sysfs entries are correctly registered
 - [x] Load the module
 - [x] Confirm /dev/simtemp
 - [x] cat /dev/simtemp
-- [ ] Confirm sysfs attributes (/sys/class/...) exist
-- [ ] Unload and confirm cleanup (no lingering device nodes or sysfs entries)
+- [x] Confirm sysfs attributes (/sys/class/...) exist
+- [x] Unload and confirm cleanup (no lingering device nodes or sysfs entries)
 ## T2 Data Generation
 Goal: Verify data generation and sampling behavior. 
-- [ ] Confirm default periodic data updates (baseline period)
-- [ ] Change sampling time to 100 ms
-- [ ] Verify periodicity with strace or poll() timing
-- [ ] Ensure module handles timing drift under long runs (e.g., 5–10s test)
-## T3 Threshold Evemt
+- [x] Confirm default periodic data updates (baseline period)
+- [x] Change sampling time to 100 ms
+- [x] Verify periodicity with strace or poll() timing
+- [x] Ensure module handles timing drift under long runs (e.g., 5–10s test)
+## T3 Threshold Event
 Goal: Verify blocking reads and threshold triggers.
-- [ ] Lower threshold below mean value
-- [ ] Confirm poll()/blocking read unblocks within 2–3 periods
-- [ ] Verify event flag/notification is set and cleared correctly.
-- [ ] Test boundary conditions (threshold exactly equal to mean)
-## T4 Erro Paths:
+- [x] Lower threshold below mean value
+- [x] Confirm poll()/blocking read unblocks within 2–3 periods
+- [x] Verify event flag/notification is set and cleared correctly.
+- [x] Test boundary conditions (threshold exactly equal to mean)
+## T4 Error Paths:
 Goal: Ensure invalid operations are safely rejected.
-- [ ] Invalid writes return -EINVAL
-- [ ] Invalid ioctl returns -ENOTTY (if applicable)
+- [x] Invalid writes return -EINVAL
+- [x] Invalid ioctl returns -ENOTTY (if applicable)
 - [ ] Stress test under fast sampling (1 ms) → confirm stability, no kernel warnings
-- [ ] Verify correct cleanup on unexpected failures (rmmod during active read)
+- [x] Verify correct cleanup on unexpected failures (rmmod during active read)
 ## T5 Concurrency:
 Goal: Test thread safety and safe teardown.
 - [ ] Run reader + config writer concurrently
@@ -45,4 +45,4 @@ Goal: Ensure stable user–kernel interface.
 - [ ] Verify struct layout (alignment, padding, endianness)
 - [ ] Document expected read/write formats
 - [ ] User-space app handles partial reads/writes robustly
-- [ ] Confirm ABI stability across rebuilds (struct size must not change silently)
+- [ ] Confirm API stability across rebuilds (struct size must not change silently)
