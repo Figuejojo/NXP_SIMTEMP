@@ -167,6 +167,8 @@ static __poll_t simtemp_poll(struct file *filp, poll_table *wait)
 
   poll_wait(filp, &sdev->wq, wait);
 
+  if(READ_ONCE(sdev->state) != eST_NORMAL)  return EPOLLPRI;
+
   if(READ_ONCE(sdev->seq) != ctx->seen_flag) return EPOLLIN | EPOLLRDNORM;
 
   return 0;
@@ -389,7 +391,7 @@ int nxp_simtemp_cdev_set_mode(simtemp_dev_t *dev, simtemp_modes_e mode)
 
   if (!dev) return -ENODEV;
 
-  if (mode < eNORMAL || mode > eEND) return -ERANGE;
+  if (mode < eNORMAL || mode >= eEND) return -ERANGE;
 
   { // Critial Section
     mutex_lock(&dev->lock);

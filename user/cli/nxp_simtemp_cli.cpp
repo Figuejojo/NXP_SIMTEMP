@@ -118,7 +118,7 @@ int NXPSimtempCLI::pollSamples(int numSamples)
 
   struct pollfd fds[1];
   fds[0].fd = dev_fd;
-  fds[0].events = POLLIN;
+  fds[0].events = POLLIN | POLLPRI;
 
   int samples_read = 0;
   int timeout_ms = 60000; // 60 seconds timeout
@@ -142,7 +142,7 @@ int NXPSimtempCLI::pollSamples(int numSamples)
       return -1;
     }
 
-    if (fds[0].revents & POLLIN)
+    if (fds[0].revents & POLLIN || fds[0].revents & POLLPRI)
     {
       SimtempSample sample;
       ssize_t bytes_read = ::read(dev_fd, &sample, sizeof(sample));
@@ -177,10 +177,18 @@ int NXPSimtempCLI::pollSamples(int numSamples)
       double temp_c = sample.temp_mC / 1000.0;
       int alert = (sample.flags & 0x1) ? 1 : 0;
 
+
       std::cout << iso8601;
       std::cout << "\ttemp=" << std::fixed << std::setprecision(1) << temp_c;
-      std::cout << "C\talert=" << alert << std::endl;
-
+      std::cout << "C\talert=" << alert;
+      if(fds[0].revents & POLLPRI)
+      {
+        std::cout << " - Alarm triggered!"<<std::endl;
+      }
+      else
+      {
+        std::cout<<std::endl;
+      }
       samples_read++;
     }
 
