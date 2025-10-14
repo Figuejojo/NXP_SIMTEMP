@@ -6,8 +6,8 @@ set -e
 
 # Running Lint To verify all programms are good to go for building
 # and installation.
-echo "Checking Lint"
-./lint.sh
+echo "Checking Kernel Lint"
+./lint.sh kernel
 
 # Run the 'build' target in the Makefile
 echo "Building kernel 'make build'..."
@@ -16,3 +16,14 @@ echo "Building kernel 'make build'..."
 # Run the 'test' target in the Makefile
 echo "Installing driver'..."
 insmod ../kernel/build/nxp_simtemp.ko
+
+echo "Checking CLI Lint"
+./lint.sh user
+
+# Run the 'build' target in the Makefile
+echo "Building User Cli 'make build'..."
+(cd ../user/cli/ && make)
+
+echo "Done Use the cli 'nxp_simtemp_cli' located in user/cli/build"
+
+

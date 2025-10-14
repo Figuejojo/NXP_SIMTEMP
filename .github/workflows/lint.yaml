@@ -24,4 +24,5 @@ jobs:
       - name: Run Cppcheck linting script
         run: |
           cd scripts/
-          ./lint.sh
+          ./lint.sh kernel
+          ./lint.sh user
