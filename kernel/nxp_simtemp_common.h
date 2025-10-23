@@ -28,7 +28,7 @@
  ***********************************************/
 /* --- Common Driver Definitions --- */
 #define DRV_NAME "simtemp"
-#define DRV_VERSION "0.2.0"
+#define DRV_VERSION "1.0.0"
 
 /* --- Sample Time Driver Definitions --- */
 #define DEF_SAMPLE_RATE_MS (30000)

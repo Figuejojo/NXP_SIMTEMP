@@ -232,4 +232,8 @@ A user-space application to:
 - (Optionally) GUI for visualization and control
 
 ## Future Enhancements Section
-- TODO
+- Design and Develop a GUI for the Driver
+- Modify Qemu so it is able to run custom dtb's.
+- Support multiple driver simulations.
+    - Move from single instance to multi-instance.
+- Add Unit testing.

@@ -1,0 +1,17 @@
+/dts-v1/;
+/plugin/;
+
+/* This overlay just pulls in your dtsi content at the root */
+&{/} {
+    simtemp0: simtemp@0 {
+        compatible = "nxp,simtemp";
+        nxp,sampling-ms = <1000>;
+        status = "okay";
+    };
+
+    simtemp1: simtemp@1 {
+        compatible = "nxp,simtemp";
+        nxp,sampling-ms = <250>;
+        status = "okay";
+    };
+};

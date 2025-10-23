@@ -35,14 +35,14 @@ Goal: Ensure invalid operations are safely rejected.
 - [x] Verify correct cleanup on unexpected failures (rmmod during active read)
 ## T5 Concurrency:
 Goal: Test thread safety and safe teardown.
-- [ ] Run reader + config writer concurrently
-- [ ] Confirm no race conditions (e.g., inconsistent reads)
-- [ ] Confirm no deadlocks (system remains responsive)
-- [ ] Verify safe unload while multiple readers/writers are active (graceful fail/close)
+- [x] Run reader + config writer concurrently
+- [x] Confirm no race conditions (e.g., inconsistent reads)
+- [x] Confirm no deadlocks (system remains responsive)
+- [x] Verify safe unload while multiple readers/writers are active (graceful fail/close)
 
 ## T6 API Contract:
 Goal: Ensure stable user–kernel interface.
-- [ ] Verify struct layout (alignment, padding, endianness)
-- [ ] Document expected read/write formats
+- [x] Verify struct layout (alignment, padding, endianness)
+- [x] Document expected read/write formats
 - [ ] User-space app handles partial reads/writes robustly
 - [ ] Confirm API stability across rebuilds (struct size must not change silently)
