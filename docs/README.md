@@ -1,6 +1,11 @@
-# Build and run steps.
+# NXP SIMTEMP (v1.0.0)
+## LINKS
+- Github Repo: [NXP SIMTEMP Driver](https://github.com/Figuejojo/NXP_SIMTEM)
+- Usage Video: [Walkthrough video](https://drive.google.com/file/d/1uo8o_3Zb-gIUaV_5jhqZJjyFcyJsKiaE/view?usp=sharing)
 
-## Build procedure using the script
+## Build and run steps.
+
+### Build procedure using the script
 To build the module, navigate to the `scripts` directory and execute the `build.sh` script.
 This script will perform the following steps:
 1. **Run lint on kernel folder:** Execute ```./lint.sh kernel```, which runs a static code analysis over the kernel folder. These are checked using ```cppcheck``` for C language. The process will be terminated if any errors are found.
@@ -8,7 +13,7 @@ This script will perform the following steps:
 3. **Run lint on user/cli folder:** Execute ```./lint.sh user```. ```cppcheck``` will run a static code analysis, but for C++ under the user folder. If it fails, the process is terminated.
 4. **Build User:** Build the user applications. CLI and GUI. The executable is then stored under its respective build folder. I.e: ./user/cli/build/[exe].
 
-## Run Steps
+### Run Steps
 Once build and installed, use the cli executable to interact with the driver.
 ```nxp_simtemp_cli```supports the following commands:
 - ```-h``` or ```help```: Detail all the CLI capabilities.
@@ -22,6 +27,5 @@ List of supported attributes:
 - ```STAT```: Sensor Status, two states, with R permissions. (Default: 0: Normal)
 For more detail info on the attributes and commands, use the cli executable with the help option.
 
-# LINKS
-- Github Repo: [NXP SIMTEMP Driver](https://github.com/Figuejojo/NXP_SIMTEM)
-- Usage Video: [Walkthrough video](https://drive.google.com/file/d/1uo8o_3Zb-gIUaV_5jhqZJjyFcyJsKiaE/view?usp=sharing)
+## SIGN
+MSc. Jose Jorge (JJ) Figueroa Figueroa
